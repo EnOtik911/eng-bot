@@ -12,9 +12,12 @@
 | 3 | GATE 1 findings | orchestrator | research | 2 | 3 | VERIFIED — approved by owner |
 | 4 | GATE 2 specification | orchestrator | GATE 1 | 3 | 4 | VERIFIED — approved by owner |
 | 5 | Implementation, first pass | orchestrator | GATE 2 | 4 | 5 | VERIFIED — tests green |
-| 6 | Deploy to live artifacts | **owner** | docs/deploy.md | 5 | 6 | BLOCKED — needs his Google account, bot token, GitHub push |
-| 7 | Live proof after deploy | orchestrator | owner's exec URL | 6 | 7 | pending |
-| 8 | tech-bank 004-006 | orchestrator | shipped code | 5 | 7 | pending |
+| 6 | Deploy: GitHub + Pages | orchestrator | docs/deploy.md | 5 | 6 | VERIFIED — https://enotik911.github.io/eng-bot/app/ HTTP 200 |
+| 7 | Deploy: Sheets, script properties, Web App | **owner** | docs/deploy.md steps 1-5 | 5 | 6 | DONE by owner — six tabs present, deployment V2 live |
+| 8 | Live proof of the backend | orchestrator | exec URL | 7 | 7 | VERIFIED — six request paths probed against the deployed endpoint |
+| 9 | Mini App wired to backend | orchestrator | exec URL | 8 | 7 | VERIFIED — published config.js serves the real URL |
+| 10 | First real session end to end | **owner** | seedStarterBatch, runImport | 9 | 8 | pending — cards sheet still empty |
+| 11 | tech-bank 005-007 | orchestrator | shipped code | 9 | 8 | pending |
 
 ## Settled decisions (do not re-litigate)
 
@@ -38,6 +41,33 @@
 - PROJECT.md ToC ranges reconciled against real `## ` offsets — 112 lines, cap 150
 - Three defects found by tests and fixed: missing `rating` argument in the recall path; `remaining()` double count; example-match rule too strict for collocations
 
+## Live evidence (deployment V2, 2026-08-28)
+
+Probed against the real `/exec`, not a test double:
+
+- `?action=ping` -> `{"ok":true,"pong":...}`
+- `?action=session` without initData -> `{"ok":false,"code":"BAD_INIT_DATA"}` — the refusal IS the success criterion
+- POST flush with forged initData -> `BAD_INIT_DATA`
+- POST unknown action -> `BAD_REQUEST "unknown action"`
+- POST non-JSON body -> `BAD_REQUEST "body is not JSON"`
+- POST Telegram-shaped update without the secret -> `{"ok":true}`, silent by design
+- `Access-Control-Allow-Origin: *` present on the final response after the 302
+- Published `app/config.js` on Pages carries the real exec URL (fetched from github.io)
+
+Two design defects found only by running it:
+
+- **standalone vs onOpen.** ADR-02 chose a standalone script; `Menu.gs` used a simple
+  `onOpen()`, which only fires for container-bound scripts. The menu could never have
+  appeared. Fixed with an installable onOpen trigger bound to the sheet by id, plus
+  editor-runnable twins for every menu action.
+- **deployment pinned to a stale version.** `clasp push` reported success while `/exec`
+  kept serving version 1. Exactly the trap documented in tech-bank/004, hit for real.
+
+One testing artifact worth remembering: `curl -X POST -L` keeps the method POST across
+the 302, which returns Google's HTML error page and looks like a broken endpoint. A
+browser switches to GET on the redirect; `curl --data ... -L` without `-X` reproduces
+that. The code was correct and the test was wrong.
+
 ## Corrections issued to the owner
 
 - GitHub Pages limits DO exist (100 GB/mo, 1 GB site, 10 builds/hr) — GATE 1 claimed otherwise
@@ -46,6 +76,13 @@
 
 ## Resume instruction
 
-Next actionable step belongs to the owner: `docs/deploy.md` steps 1-9.
-When he returns with the `/exec` URL, resume at wave 7: live proof per the
-`## Restart & live probe` section of PROJECT.md, then tech-bank 004-006.
+The system is deployed and the backend is verified live. The only thing standing
+between here and a working trainer is content: the `cards` sheet is empty.
+
+Next actionable step belongs to the owner, in the Apps Script editor:
+1. run `seedStarterBatch` — puts 20 rows into `inbox`
+2. run `runImport` — creates 40 cards, report in the execution log
+3. open the Mini App from the bot and answer six cards
+
+Then resume at wave 8: read `review_log_2026` after that session as the end-to-end
+live proof, and write tech-bank 005-007 against shipped code.
