@@ -16,8 +16,16 @@ function installTriggers() {
   ScriptApp.newTrigger('checkWebhook').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY)
     .atHour(9).create();
 
-  Logger.log('installed: dailyPing at ~' + hour + ':00, checkWebhook Mondays ~09:00');
-  Logger.log('now set Failure notification to "Notify me immediately" for both');
+  // A standalone script never runs a simple onOpen(), so the spreadsheet menu has to
+  // be attached with an installable trigger bound to that specific document.
+  ScriptApp.newTrigger('onOpenMenu')
+    .forSpreadsheet(SpreadsheetApp.openById(cfg_('SHEET_ID')))
+    .onOpen()
+    .create();
+
+  Logger.log('installed: dailyPing at ~' + hour + ':00, checkWebhook Mondays ~09:00, '
+    + 'onOpenMenu on the spreadsheet');
+  Logger.log('now set Failure notification to "Notify me immediately" for the two time-based ones');
 }
 
 function listTriggers() {

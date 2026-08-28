@@ -1023,8 +1023,16 @@ function installTriggers() {
   ScriptApp.newTrigger('checkWebhook').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY)
     .atHour(9).create();
 
-  Logger.log('installed: dailyPing at ~' + hour + ':00, checkWebhook Mondays ~09:00');
-  Logger.log('now set Failure notification to "Notify me immediately" for both');
+  // A standalone script never runs a simple onOpen(), so the spreadsheet menu has to
+  // be attached with an installable trigger bound to that specific document.
+  ScriptApp.newTrigger('onOpenMenu')
+    .forSpreadsheet(SpreadsheetApp.openById(cfg_('SHEET_ID')))
+    .onOpen()
+    .create();
+
+  Logger.log('installed: dailyPing at ~' + hour + ':00, checkWebhook Mondays ~09:00, '
+    + 'onOpenMenu on the spreadsheet');
+  Logger.log('now set Failure notification to "Notify me immediately" for the two time-based ones');
 }
 
 function listTriggers() {
@@ -1124,9 +1132,22 @@ function seedStarterBatch() {
 // Menu.gs
 // ==========================================================================
 
-/** Custom menu on the spreadsheet. The import workflow lives here. */
+/**
+ * Меню таблицы.
+ *
+ * ВАЖНО: этот проект standalone (ADR-02), а простой `onOpen()` вызывается только
+ * у скриптов, привязанных к документу. Поэтому меню ставится УСТАНАВЛИВАЕМЫМ
+ * триггером на конкретную таблицу — см. installTriggers() в Triggers.gs.
+ * Без этого триггера меню не появится, и это не поломка настроек, а следствие
+ * выбора standalone.
+ *
+ * Каждая операция продублирована функцией без префикса `menu`, которую можно
+ * запустить прямо из редактора Apps Script: результат уходит в журнал выполнения,
+ * а не в диалог. Так всё доступно даже до установки триггера.
+ */
 
-function onOpen() {
+function onOpenMenu(e) {
+  var ss = e && e.source ? e.source : ss_();
   SpreadsheetApp.getUi()
     .createMenu('Eng_bot')
     .addItem('Импортировать батч из inbox', 'menuImport')
@@ -1140,11 +1161,63 @@ function onOpen() {
     .addToUi();
 }
 
+/** Совместимость: если проект однажды сделают привязанным, меню появится и так. */
+function onOpen(e) {
+  onOpenMenu(e);
+}
+
+// ---------------------------------------------------------------------------
+// Запускается из редактора: без UI, отчёт в журнал выполнения
+// ---------------------------------------------------------------------------
+
+/** Импорт из inbox. Запускай из редактора, результат в журнале (Ctrl+Enter). */
+function runImport() {
+  var report = importInbox(cfgAllowlist_()[0]);
+  Logger.log('Принято единиц: ' + (report.accepted || 0));
+  Logger.log('Создано карточек: ' + (report.cards_created || 0));
+  Logger.log('Отклонено: ' + (report.rejected || 0));
+  Logger.log('Дубликатов: ' + (report.duplicates || 0));
+  if (report.batch) Logger.log('Батч: ' + report.batch);
+  if ((report.rejected || 0) + (report.duplicates || 0) > 0) {
+    Logger.log('Причины построчно — на листе "' + SHEET_REJECTS + '"');
+  }
+  if (report.message) Logger.log(report.message);
+  return report;
+}
+
+/** Тестовый пинг в Telegram. Запускай из редактора. */
+function runTestPing() {
+  dailyPing();
+  Logger.log('dailyPing выполнен. Если сообщения нет — проверь BOT_TOKEN и ALLOWLIST.');
+}
+
+/** Состояние webhook. Запускай из редактора. */
+function runCheckWebhook() {
+  var info = tgApi_('getWebhookInfo', {});
+  Logger.log(JSON.stringify(info.result || info, null, 2));
+  return info;
+}
+
+/** Состояние очереди по данным, а не по ощущениям. Запускай из редактора. */
+function runStats() {
+  var s = buildSession(cfgAllowlist_()[0]);
+  Logger.log('Всего карточек: ' + s.counts.total);
+  Logger.log('К повторению сейчас: ' + s.counts.due);
+  Logger.log('Новых в запасе: ' + s.counts.new_available);
+  Logger.log('Заблокировано до созревания: ' + s.counts.locked);
+  Logger.log('Пиявок: ' + s.counts.leeches);
+  if (s.warnings.length) Logger.log('Предупреждения: ' + s.warnings.join(', '));
+  return s.counts;
+}
+
+// ---------------------------------------------------------------------------
+// Обработчики пунктов меню: те же операции, но с диалогами
+// ---------------------------------------------------------------------------
+
 function menuImport() {
   var ui = SpreadsheetApp.getUi();
   try {
-    var userId = cfgAllowlist_()[0];
-    var report = importInbox(userId);
+    var report = runImport();
     var lines = [
       'Принято единиц: ' + (report.accepted || 0),
       'Создано карточек: ' + (report.cards_created || 0),
@@ -1163,20 +1236,20 @@ function menuImport() {
 
 function menuTestPing() {
   var ui = SpreadsheetApp.getUi();
-  try { dailyPing(); ui.alert('Пинг отправлен'); }
+  try { runTestPing(); ui.alert('Пинг отправлен'); }
   catch (e) { ui.alert('Не отправлен', String(e.message), ui.ButtonSet.OK); }
 }
 
 function menuCheckWebhook() {
-  var info = tgApi_('getWebhookInfo', {});
-  SpreadsheetApp.getUi().alert('getWebhookInfo', JSON.stringify(info.result || info, null, 2),
-    SpreadsheetApp.getUi().ButtonSet.OK);
+  var ui = SpreadsheetApp.getUi();
+  var info = runCheckWebhook();
+  ui.alert('getWebhookInfo', JSON.stringify(info.result || info, null, 2), ui.ButtonSet.OK);
 }
 
 function menuSelfCheck() {
   selfCheck();
-  SpreadsheetApp.getUi().alert('Готово', 'Результат в журнале выполнения (Ctrl+Enter).',
-    SpreadsheetApp.getUi().ButtonSet.OK);
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('Готово', 'Результат в журнале выполнения (Ctrl+Enter).', ui.ButtonSet.OK);
 }
 
 // ==========================================================================
