@@ -8,6 +8,10 @@ echo "── bundle: dist/all-in-one.gs is in sync with gas/"
 node test/build-all-in-one.mjs --check || fail=1
 echo
 
+echo "── guide: app/guide.html is in sync with docs/guide.md"
+node test/build-guide.mjs --check || fail=1
+echo
+
 echo "── syntax: every .gs and .js file parses"
 node -e '
 const fs=require("fs");let bad=0;
@@ -19,7 +23,7 @@ console.log(bad? bad+" file(s) with syntax errors" : "  "+files.length+" files p
 process.exit(bad?1:0);' || fail=1
 echo
 
-for t in test/fsrs.test.mjs test/session.test.mjs test/auth.test.mjs test/import-format.test.mjs test/css-hidden.test.mjs test/session-server.test.mjs test/contrast.test.mjs test/css-perf.test.mjs; do
+for t in test/fsrs.test.mjs test/session.test.mjs test/auth.test.mjs test/import-format.test.mjs test/css-hidden.test.mjs test/session-server.test.mjs test/contrast.test.mjs test/css-perf.test.mjs test/guide-html.test.mjs; do
   echo "── $t"
   node "$t" || fail=1
   echo

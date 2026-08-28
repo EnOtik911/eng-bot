@@ -1,0 +1,183 @@
+/**
+ * Стили гайда. Токены берутся из styles.css — своей палитры здесь нет намеренно:
+ * гайд должен выглядеть частью приложения, а не документом рядом с ним.
+ *
+ * Стёкол по-прежнему два: .topbar из styles.css и .card, которую переиспользуют
+ * содержание и текст. Бюджет из css-perf.test.mjs не нарушается.
+ */
+
+.g-main {
+  flex: 1;
+  display: grid;
+  gap: var(--s3);
+  align-content: start;
+  padding: var(--s3);
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+@media (min-width: 900px) {
+  .g-main { grid-template-columns: 232px minmax(0, 1fr); align-items: start; }
+  .g-toc { position: sticky; top: 76px; }
+}
+
+/* ---------- содержание ---------- */
+
+.g-toc { padding: var(--s2); display: grid; gap: 2px; animation: none; }
+.g-toc-title {
+  margin: 0 0 var(--s1);
+  padding: 0 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.g-toc a {
+  display: block;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--fg-dim);
+  text-decoration: none;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.g-toc a:hover { background: rgba(14, 21, 38, .05); color: var(--fg); }
+.g-toc a.is-active {
+  background: rgba(53, 102, 234, .1);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.g-back {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* ---------- документ ---------- */
+
+.g-doc {
+  padding: var(--s4) var(--s3);
+  animation: none;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 700px) { .g-doc { padding: var(--s5) var(--s4); } }
+
+.g-doc > :first-child { margin-top: 0; }
+
+.g-doc h1, .g-h1 {
+  font-size: clamp(28px, 6vw, 38px);
+  font-weight: 700;
+  letter-spacing: -.024em;
+  line-height: 1.12;
+  margin: 0 0 var(--s3);
+}
+
+.g-h2 {
+  font-size: clamp(21px, 4vw, 26px);
+  font-weight: 660;
+  letter-spacing: -.02em;
+  line-height: 1.2;
+  margin: var(--s5) 0 var(--s2);
+  scroll-margin-top: 84px;
+}
+.g-h3 {
+  font-size: 17.5px;
+  font-weight: 650;
+  letter-spacing: -.012em;
+  margin: var(--s4) 0 var(--s1);
+}
+
+.g-p { margin: 0 0 var(--s2); font-size: 16px; line-height: 1.62; color: var(--fg-dim); }
+.g-p strong { color: var(--fg); font-weight: 640; }
+
+.g-doc code {
+  font: 500 .875em/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(14, 21, 38, .06);
+  border: 1px solid rgba(14, 21, 38, .05);
+  color: #24304A;
+  white-space: nowrap;
+}
+
+.g-doc a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(53, 102, 234, .3); }
+.g-doc a:hover { border-bottom-color: var(--accent); }
+
+.g-quote {
+  margin: 0 0 var(--s3);
+  padding: var(--s2) var(--s2) var(--s2) var(--s3);
+  border-radius: var(--r-md);
+  border-left: 3px solid var(--accent);
+  background: rgba(53, 102, 234, .06);
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--fg-dim);
+}
+
+.g-pre {
+  margin: 0 0 var(--s3);
+  padding: var(--s2);
+  border-radius: var(--r-md);
+  background: rgba(14, 21, 38, .045);
+  border: 1px solid rgba(14, 21, 38, .07);
+  overflow-x: auto;
+}
+.g-pre code {
+  background: none; border: 0; padding: 0; white-space: pre;
+  font-size: 12.5px; line-height: 1.6; color: #24304A;
+}
+
+.g-hr { height: 0; margin: var(--s5) 0; border: 0; border-top: 1px solid rgba(14, 21, 38, .09); }
+
+/* ---------- таблицы ---------- */
+
+.g-tablewrap {
+  margin: 0 0 var(--s3);
+  border-radius: var(--r-md);
+  border: 1px solid rgba(14, 21, 38, .08);
+  background: rgba(255, 255, 255, .5);
+  overflow-x: auto;
+}
+.g-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.g-table th {
+  text-align: left;
+  padding: 11px var(--s2);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  background: rgba(14, 21, 38, .04);
+  border-bottom: 1px solid rgba(14, 21, 38, .08);
+  white-space: nowrap;
+}
+.g-table td {
+  padding: 12px var(--s2);
+  vertical-align: top;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  border-bottom: 1px solid rgba(14, 21, 38, .05);
+}
+.g-table tbody tr:last-child td { border-bottom: 0; }
+.g-table td:first-child { color: var(--fg); font-weight: 560; }
+.g-table td strong { color: var(--fg); }
+
+/* кнопка «?» в панели тренажёра */
+.g-help {
+  flex: 0 0 auto;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  font-size: 13px; font-weight: 700;
+  color: var(--fg-faint);
+  text-decoration: none;
+  background: rgba(14, 21, 38, .06);
+  border: 1px solid rgba(14, 21, 38, .07);
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.g-help:hover, .g-help:active { color: var(--accent); background: rgba(53, 102, 234, .1); }
