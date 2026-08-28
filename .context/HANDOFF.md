@@ -61,6 +61,48 @@ first read of the full-page screenshot said "still washed out" and was wrong —
 downscaled PNG averaged the glyphs away; the 3x crop and the pixel measurement agree the
 text is black.
 
+## T-008 — motion, decor, keyboard (v0.7.0)
+
+Owner asked why no animation libraries are used, and whether it could be cooler. Fair
+question that had never been answered — the decision was made silently at design time.
+
+Answered by measurement rather than opinion. Verified in Playwright's WebKit AND
+Chromium: `linear()` spring easing parses as a real curve in both (this is most of what
+Motion One's ~18KB sells), `filter: url(#svg)` renders in both, `element.animate()` and
+View Transitions exist in both. `backdrop-filter: url()` renders in Chromium; NOT
+verifiable here for iOS, because Playwright's WebKit build does not render
+backdrop-filter at all — proven by plain blur showing a zero pixel difference. So the
+displacement filter is applied to elements, never to the backdrop.
+
+Conclusion kept: no library. Not dogma — the specific costs here are a CDN runtime
+dependency against an offline-first design, plus startup bytes on LTE, for capabilities
+the engine already has.
+
+Delivered: spring easing tokens, staggered list entry, FLIP tile movement in the
+scramble exercise (tiles previously teleported), a drawn tick on a correct answer, a
+short nudge on a wrong one, a redrawn airliner and four-ring decor, a labelled «Назад»
+button, Telegram's native BackButton, and a «Готово» affordance plus sticky action row
+so the keyboard cannot hide «Проверить».
+
+### Three findings worth keeping
+
+1. **Glass on a list row is glass per row.** `.pattern-row` as the fourth glass surface
+   produced eight simultaneous backdrop-filters on the picker, and twenty once the full
+   tense map is loaded. The budget test counted SELECTORS (4 of 5 allowed) and was blind
+   to it. The fourth glass moved to `.slots`, which is always exactly one on screen, and
+   css-perf now counts instances per screen and rejects a glass class assigned from JS.
+2. **My frame measurement was worthless and I discarded it.** With motion disabled the
+   numbers were the WORST of all variants — requestAnimationFrame throttles when nothing
+   is being painted, so the metric measured how much animation was running. Adding a
+   constant pacer element fixed that part, but the remaining numbers still contradicted
+   themselves (FLIP slowest in the variant where FLIP is off), so Playwright protocol
+   overhead dominates. No frame numbers are quoted anywhere. Real verification is on the
+   owner's phone.
+3. **The render harness was stale for three iterations.** It loads `app.html` (an
+   SDK-stubbed copy) and I was copying into `index.html`, so I was judging old markup
+   and "fixing" a plane that had already been redrawn. The harness is now rebuilt by one
+   script that asserts its decor markup matches the repository.
+
 ## Settled decisions (do not re-litigate)
 
 - FSRS state on the PATTERN, sentences drawn from a pool — scheduling the sentence
@@ -90,6 +132,15 @@ text is black.
   under blur refracts nothing — `app/styles.css`
 - `item.kind` is a schema value and never reaches the screen; the Russian per-kind
   instruction is the only label — `test/dom-ids.test.mjs`
+- No animation library. The two capabilities libraries sell here — spring easing and
+  FLIP — are `linear()` and `element.animate()`, both verified in WebKit and Chromium.
+  A CDN script would also break offline-first — `app/styles.css`, `app/grammar-ui.js`
+- A glass class must never be assigned from JS: one glass on a list is one glass per
+  row — `test/css-perf.test.mjs`
+- The displacement filter goes on elements, never on `backdrop-filter`: the backdrop
+  path is unverifiable for iOS from here — `app/index.html`
+- Filter on the child, animation on the wrapper: a filtered element that animates is
+  re-filtered every frame — `app/styles.css` `.drift`
 
 ## Verification evidence (by reference)
 

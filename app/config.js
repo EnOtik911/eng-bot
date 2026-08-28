@@ -8,5 +8,5 @@ window.ENGBOT_CONFIG = {
   // Куда ведёт ярлык времени на карточке грамматики: теорию ты пишешь сам,
   // приложение только всегда держит рядом ссылку на неё.
   GRAMMAR_NOTES_URL: 'https://github.com/EnOtik911/eng-bot/blob/main/docs/grammar-map.md',
-  VERSION: '0.6.1'
+  VERSION: '0.7.0'
 };

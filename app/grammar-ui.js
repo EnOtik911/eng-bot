@@ -14,10 +14,27 @@
   var T = A.T;
   var el = A.el;
 
+  // Та же кривая, что в --spring: значение читается из CSS, чтобы пружина была
+  // одна на всё приложение, а не две расходящиеся копии.
+  var SPRING = getComputedStyle(document.documentElement)
+    .getPropertyValue('--spring').trim() || 'cubic-bezier(.32,.72,0,1)';
+
   var block = null;
   var phase = 'ask';            // ask | verdict
   var lastSummary = null;
   var advanceTimer = null;
+
+  /** Перезапуск завершённой CSS-анимации: без снятия класса и рефлоу она не играет. */
+  function restart(node, cls) {
+    if (A.prefersReducedMotion()) return;
+    node.classList.remove(cls);
+    void node.offsetWidth;
+    node.classList.add(cls);
+    node.addEventListener('animationend', function once() {
+      node.classList.remove(cls);
+      node.removeEventListener('animationend', once);
+    });
+  }
 
   function kindInstruction(kind) {
     switch (kind) {
@@ -59,6 +76,7 @@
       var row = document.createElement('button');
       row.className = 'pattern-row';
       row.setAttribute('data-pattern', p.pattern_id);
+      row.style.setProperty('--i', list.children.length);
 
       var badge = p.state === 'new' ? T.pickerNew
         : (p.is_due ? T.pickerDue : T.pickerScheduled(p.due));
@@ -109,8 +127,10 @@
     var done = block.roundsDone * per + (r ? r.idx : 0);
     A.progress(done, Math.max(block.plannedRounds * per, 1));
     if (r) {
-      A.counter('шаблон ' + (block.roundsDone + 1) + ' из ' + block.plannedRounds +
-        ' · задание ' + Math.min(r.idx + 1, per) + ' из ' + r.items.length);
+      // Коротко: два числа вместо двух фраз. На 390 пикселях длинная версия
+      // выдавливала полосу прогресса, а смысл тот же.
+      A.counter((block.roundsDone + 1) + '/' + block.plannedRounds + ' · ' +
+        Math.min(r.idx + 1, per) + '/' + r.items.length);
     }
   }
 
@@ -140,7 +160,7 @@
 
     var isScramble = item.kind === 'scramble';
     el('g-tokens').hidden = !isScramble;
-    el('g-input').hidden = isScramble;
+    el('g-field').hidden = isScramble;
 
     if (isScramble) {
       buildTokens(item);
@@ -156,6 +176,7 @@
     el('g-hint').hidden = true;
     el('g-hint').innerHTML = '';
     el('g-verdict').hidden = true;
+    el('g-verdict').removeAttribute('data-shown');
     el('g-check').hidden = false;
     el('g-next').hidden = true;
     el('g-hint-btn').hidden = false;
@@ -183,8 +204,38 @@
       b.className = 'token';
       b.textContent = tok;
       b.setAttribute('data-token-id', 'b' + i);
+      b.style.setProperty('--i', i);
       bank.appendChild(b);
     });
+  }
+
+  /**
+   * FLIP: замерить положение до перестановки, переставить, замерить после, и
+   * проиграть разницу обратным сдвигом. Плитка выглядит летящей, хотя в разметке
+   * она просто сменила родителя.
+   *
+   * Здесь это не украшение. Плитка, которая исчезает в одном месте и появляется в
+   * другом, заставляет искать её глазами заново — в упражнении на порядок слов это
+   * прямо мешает удерживать собранную часть фразы.
+   *
+   * Ни одной библиотеки: element.animate() есть в обоих движках, замерено.
+   */
+  function moveToken(token, target) {
+    if (A.prefersReducedMotion() || !token.animate) {
+      target.appendChild(token);
+      return;
+    }
+    var before = token.getBoundingClientRect();
+    target.appendChild(token);
+    var after = token.getBoundingClientRect();
+    var dx = before.left - after.left;
+    var dy = before.top - after.top;
+    if (!dx && !dy) return;
+    token.animate(
+      [{ transform: 'translate3d(' + dx + 'px,' + dy + 'px,0)' },
+       { transform: 'translate3d(0,0,0)' }],
+      { duration: 380, easing: SPRING, composite: 'replace' }
+    );
   }
 
   function assembled() {
@@ -221,14 +272,24 @@
     el('g-check').hidden = true;
     el('g-hint-btn').hidden = true;
     el('g-verdict').hidden = false;
-    el('g-verdict-line').textContent = res.correct ? T.correct : T.wrong;
+    el('g-verdict').setAttribute('data-shown', '1');
+    el('g-verdict-text').textContent = res.correct ? T.correct : T.wrong;
     el('g-verdict-line').className = 'verdict-line ' + (res.correct ? 'ok' : 'bad');
+    // Галочка обводится заново каждый раз: анимация запускается пересозданием узла,
+    // потому что повторно проиграть завершённую CSS-анимацию иначе нельзя.
+    var tick = el('g-tick');
+    tick.hidden = !res.correct;
+    if (res.correct) {
+      var fresh = tick.cloneNode(true);
+      tick.parentNode.replaceChild(fresh, tick);
+    }
 
     if (res.correct) {
       el('g-answer').textContent = '';
       if (A.tg && A.tg.HapticFeedback) A.tg.HapticFeedback.impactOccurred('light');
-      advanceTimer = setTimeout(advance, 700);
+      advanceTimer = setTimeout(advance, 900);
     } else {
+      restart(el('gcard'), 'card-wrong');
       el('g-answer').textContent = T.correctAnswer + ' ' +
         window.Answer.alternatives(res.item.answer)[0];
       // Ошибка — единственный момент, когда объяснение точно нужно, поэтому
@@ -299,17 +360,18 @@
       if (row) beginSingle(row.getAttribute('data-pattern'));
     });
 
+    A.bindKeyboard(el('g-input'), el('g-done'), el('g-field'));
     el('g-check').addEventListener('click', check);
     el('g-next').addEventListener('click', advance);
     el('g-hint-btn').addEventListener('click', showHint);
 
     el('g-bank').addEventListener('click', function (e) {
       if (phase !== 'ask') return;
-      if (e.target.classList.contains('token')) el('g-slots').appendChild(e.target);
+      if (e.target.classList.contains('token')) moveToken(e.target, el('g-slots'));
     });
     el('g-slots').addEventListener('click', function (e) {
       if (phase !== 'ask') return;
-      if (e.target.classList.contains('token')) el('g-bank').appendChild(e.target);
+      if (e.target.classList.contains('token')) moveToken(e.target, el('g-bank'));
     });
 
     el('round-next').addEventListener('click', function () {
@@ -325,6 +387,8 @@
       if (!el('screen-grammar').hidden) {
         if (e.key === 'Enter') {
           e.preventDefault();
+          // Клавиатура уходит вместе с проверкой: иначе вердикт остаётся под ней.
+          if (document.activeElement === el('g-input')) el('g-input').blur();
           if (phase === 'ask') check(); else advance();
         }
         return;
@@ -336,5 +400,13 @@
     });
   });
 
-  window.GrammarUI = { open: open };
+  /** «Назад» из упражнения ведёт к выбору шаблона, а не сразу домой. */
+  function backToPicker() {
+    if (!block) return false;
+    if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
+    renderPicker();
+    return true;
+  }
+
+  window.GrammarUI = { open: open, backToPicker: backToPicker };
 })();

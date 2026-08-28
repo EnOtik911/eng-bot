@@ -20,21 +20,54 @@
      резким контуром намеренно — backdrop-filter смазывает именно резкий край, и это то,
      что глаз читает как преломление. Только контур, никакой заливки: заливка спорила бы
      с текстом на карточках. -->
+<!-- Преломление, а не имитация: feTurbulence даёт карту шума, feDisplacementMap
+     сдвигает по ней пиксели фигур. Фильтр применяется к слою фигур, а НЕ к подложке
+     через backdrop-filter: путь через backdrop-filter проверен только в Chromium, а
+     WebKit-сборка Playwright не рисует backdrop-filter вообще, поэтому про iOS по ней
+     судить нельзя. filter на элементе замерен и работает в обоих движках. -->
+<svg width="0" height="0" aria-hidden="true" class="filters">
+  <filter id="warp" x="-15%" y="-15%" width="130%" height="130%"
+          color-interpolation-filters="sRGB">
+    <!-- Низкая частота и малая амплитуда: нужна плавная волна, а не шум. При
+         обводке в полтора пиксела scale=34 разрывал самолёт на отдельные дуги —
+         форма перестала читаться, и «преломление» превратилось в дефект. -->
+    <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.005"
+                  numOctaves="1" seed="11" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="9"
+                       xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
 <div class="decor" aria-hidden="true">
-  <svg class="decor-plane" viewBox="0 0 100 100" fill="none">
-    <path d="M4 46 L96 4 L58 96 L44 58 Z"/>
-    <path d="M44 58 L96 4"/>
-  </svg>
-  <svg class="decor-rings" viewBox="0 0 208 64" fill="none">
-    <circle cx="32" cy="32" r="27"/>
-    <circle cx="72" cy="32" r="27"/>
-    <circle cx="112" cy="32" r="27"/>
-    <circle cx="152" cy="32" r="27"/>
-  </svg>
+  <!-- Анимация висит на обёртке, а фильтр на дочернем svg. Это не косметика: фильтр
+       на анимируемом элементе пересчитывался бы каждый кадр, а сдвиг обёртки — это
+       перемещение уже готового растра. -->
+  <div class="drift drift-plane">
+    <!-- Один замкнутый силуэт, а не сборка из отдельных крыльев: вид сверху читается
+         мгновенно только целым контуром. Фильтр преломления здесь НЕ применяется —
+         преломлять должно стекло, а фигура, искажённая заранее, читается как брак. -->
+    <svg class="decor-plane" viewBox="0 0 200 224" fill="none">
+      <path d="M100 8c5 10 8 22 9 38v50l85 52v12l-85-26v44l37 26v8l-37-16-5 20-4 8-4-8-5-20-37 16v-8l37-26v-44L6 160v-12l85-52V46c1-16 4-28 9-38z"/>
+      <path class="thin" d="M100 26v182"/>
+      <path class="thin" d="M55 140h15v22H55zM130 140h15v22h-15z"/>
+    </svg>
+  </div>
+  <div class="drift drift-rings">
+    <!-- Четыре кольца: диаметр 300, шаг между центрами 222 (0.74 диаметра),
+         толщина 34 — пропорции сняты с современного минималистичного знака. -->
+    <svg class="decor-rings" viewBox="0 0 1010 340" fill="none" filter="url(#warp)">
+      <circle cx="172" cy="170" r="150"/>
+      <circle cx="394" cy="170" r="150"/>
+      <circle cx="616" cy="170" r="150"/>
+      <circle cx="838" cy="170" r="150"/>
+    </svg>
+  </div>
 </div>
 
 <header class="topbar">
-  <button id="home-btn" class="g-back" title="На главный экран" aria-label="На главный экран" hidden>‹</button>
+  <button id="home-btn" class="g-back" title="Назад" aria-label="Назад" hidden>
+    <span class="g-back-chevron">‹</span><span class="g-back-text">Назад</span>
+  </button>
   <span id="counter" class="counter"></span>
   <span class="progress-track"><span id="progress" class="progress-fill"></span></span>
   <span id="pending" class="pending"></span>
@@ -60,8 +93,12 @@
 
       <p id="prompt" class="prompt"></p>
 
-      <input id="typebox" class="typebox" type="text" autocomplete="off"
-             autocapitalize="none" autocorrect="off" spellcheck="false" hidden>
+      <div id="typefield" class="field" hidden>
+        <input id="typebox" class="typebox" type="text" autocomplete="off"
+               autocapitalize="none" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" inputmode="text" lang="en">
+        <button id="typebox-done" class="btn-done" type="button" hidden>Готово</button>
+      </div>
       <p id="typehint" class="hint" hidden>Набери по-английски и нажми «Показать»</p>
 
       <div id="answer-block" class="answer-block" hidden>
@@ -139,13 +176,22 @@
         <div id="g-bank" class="bank"></div>
       </div>
 
-      <input id="g-input" class="typebox" type="text" autocomplete="off"
-             autocapitalize="none" autocorrect="off" spellcheck="false" hidden>
+      <div id="g-field" class="field" hidden>
+        <input id="g-input" class="typebox" type="text" autocomplete="off"
+               autocapitalize="none" autocorrect="off" spellcheck="false"
+               enterkeyhint="done" inputmode="text" lang="en">
+        <button id="g-done" class="btn-done" type="button" hidden>Готово</button>
+      </div>
 
       <p id="g-hint" class="ghint" hidden></p>
 
       <div id="g-verdict" class="verdict" hidden>
-        <p id="g-verdict-line" class="verdict-line"></p>
+        <p id="g-verdict-line" class="verdict-line">
+          <svg id="g-tick" class="tick" viewBox="0 0 26 26" hidden>
+            <path d="M5 14 L10.5 19.5 L21 7"/>
+          </svg>
+          <span id="g-verdict-text"></span>
+        </p>
         <p id="g-answer" class="answer"></p>
       </div>
 

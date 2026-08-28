@@ -9,6 +9,7 @@
   var flushing = false;
   var gflushing = false;
   var state = { vocab: null, grammar: null, grammarError: null };
+  var currentScreen = 'screen-loading';
 
   function el(id) { return document.getElementById(id); }
 
@@ -33,8 +34,24 @@
 
   var CHROME_FREE = ['screen-home', 'screen-picker', 'screen-loading', 'screen-error'];
 
+  /**
+   * Нативная кнопка «назад» Telegram. Она живёт в чроме приложения, поэтому её не
+   * закрывает клавиатура и не надо угадывать её размер — в отличие от шеврона в
+   * нашей панели, который до этого был единственным способом уйти назад.
+   */
+  function syncBackButton(screen) {
+    if (!tg || !tg.BackButton) return;
+    if (CHROME_FREE.indexOf(screen) >= 0 && screen !== 'screen-picker') {
+      tg.BackButton.hide();
+    } else {
+      tg.BackButton.show();
+    }
+  }
+
   function show(screen) {
+    currentScreen = screen;
     SCREENS.forEach(function (id) { el(id).hidden = id !== screen; });
+    syncBackButton(screen);
     // Кнопка «назад» и полоса прогресса имеют смысл только внутри сессии.
     el('home-btn').hidden = CHROME_FREE.indexOf(screen) >= 0;
     if (CHROME_FREE.indexOf(screen) >= 0) {
@@ -80,7 +97,7 @@
     el('example').textContent = card.example_en || '';
     el('example-ru').textContent = card.example_ru || '';
 
-    el('typebox').hidden = !isProd;
+    el('typefield').hidden = !isProd;
     el('typebox').value = '';
     el('typehint').hidden = !isProd;
 
@@ -315,12 +332,48 @@
     el('home-note').hidden = !note;
     el('home-note').textContent = note;
 
+    // Индекс задаёт задержку появления, лестница считается в CSS.
+    ['tile-vocab', 'tile-grammar'].forEach(function (id, i) {
+      el(id).style.setProperty('--i', i);
+    });
+
     if (v && v.warnings) {
       if (v.warnings.indexOf('trigger_stale') >= 0) setBanner(T.triggerStale, 'warn');
       else if (v.warnings.indexOf('trigger_never_ran') >= 0) setBanner(T.triggerNever, 'warn');
     }
 
     show('screen-home');
+  }
+
+  /** Один смысл «назад» на всё приложение: из любого экрана — на главный. */
+  function goBack() {
+    if (currentScreen === 'screen-grammar' || currentScreen === 'screen-round' ||
+        currentScreen === 'screen-gdone') {
+      // Из упражнения — сначала к выбору шаблона, оттуда домой.
+      if (window.GrammarUI && window.GrammarUI.backToPicker()) return;
+    }
+    renderHome();
+  }
+
+  /**
+   * Клавиатура на телефоне закрывает кнопку действия, а закрыть её самому нечем:
+   * тап «мимо поля» работает не везде, а Enter не все ищут. Поэтому пока поле в
+   * фокусе — рядом стоит «Готово», а строка действий прилипает к низу карточки.
+   */
+  function bindKeyboard(input, doneBtn, field) {
+    if (!input || !doneBtn) return;
+    var actions = field ? field.closest('.card') : null;
+    var row = actions ? actions.querySelector('.g-actions') : null;
+
+    input.addEventListener('focus', function () {
+      doneBtn.hidden = false;
+      if (row) row.classList.add('keyboard-open');
+    });
+    input.addEventListener('blur', function () {
+      doneBtn.hidden = true;
+      if (row) row.classList.remove('keyboard-open');
+    });
+    doneBtn.addEventListener('click', function () { input.blur(); });
   }
 
   function startVocab() {
@@ -353,7 +406,11 @@
     el('retry').addEventListener('click', start);
     el('diag').addEventListener('click', runDiag);
     el('again-session').addEventListener('click', start);
-    el('home-btn').addEventListener('click', function () { renderHome(); });
+    el('home-btn').addEventListener('click', goBack);
+
+    if (tg && tg.BackButton && tg.BackButton.onClick) tg.BackButton.onClick(goBack);
+
+    bindKeyboard(el('typebox'), el('typebox-done'), el('typefield'));
     el('tile-vocab').addEventListener('click', startVocab);
     el('tile-grammar').addEventListener('click', function () {
       if (window.GrammarUI) window.GrammarUI.open(state.grammar);
@@ -402,6 +459,8 @@
    */
   window.App = {
     el: el,
+    bindKeyboard: bindKeyboard,
+    syncBackButton: syncBackButton,
     show: show,
     setBanner: setBanner,
     T: T,

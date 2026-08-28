@@ -11,7 +11,7 @@
  *
  *   node test/css-perf.test.mjs
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -66,6 +66,64 @@ check('backdrop-filter стоит не более чем на 5 селектор
   assert(selectors.size <= 5,
     selectors.size + ' стеклянных селекторов — больше пяти роняет кадры на среднем телефоне');
   assert(selectors.size >= 1, 'ни одного стекла — тогда этот тест не нужен');
+});
+
+check('стекло не стоит на элементе, который создаётся списком', () => {
+  // Бюджет в пять СЕЛЕКТОРОВ ничего не говорит о числе живых стёкол. Стекло на строке
+  // списка шаблонов дало восемь одновременных backdrop-filter на одном экране, а при
+  // полной карте времён дало бы двадцать: замер при CPU x4 показал 95-й перцентиль
+  // 78 мс даже с выключенными анимациями — каждый третий кадр пропущен.
+  //
+  // Признак, который это отличает от единичного стекла: класс присваивается из кода,
+  // значит число элементов не ограничено разметкой.
+  const glassClasses = [...css.matchAll(/^\s*\.([a-z][a-z0-9-]*)[^{}\n]*\{[^}]*[^-]backdrop-filter\s*:/gm)]
+    .map(m => m[1]);
+  assert(glassClasses.length > 0, 'ни одного стекла по классу — проверка бессмысленна');
+
+  const appDir = join(here, '..', 'app');
+  const dynamic = [];
+  for (const f of readdirSync(appDir).filter(x => x.endsWith('.js'))) {
+    const src = readFileSync(join(appDir, f), 'utf8');
+    for (const c of glassClasses) {
+      const assignedInJs =
+        src.includes("className = '" + c + "'") ||
+        src.includes("className = '" + c + " ") ||
+        src.includes("classList.add('" + c + "'") ||
+        src.includes('class="' + c) ||
+        src.includes("class=\\\"" + c);
+      if (assignedInJs) dynamic.push(c + ' (в ' + f + ')');
+    }
+  }
+  assert(dynamic.length === 0,
+    'класс со стеклом присваивается из кода, значит число стёкол не ограничено:\n         ' +
+    dynamic.join('\n         ') +
+    '\n         одно стекло на список — это стекло на каждый элемент списка');
+
+  // Считаются экземпляры В ПРЕДЕЛАХ ОДНОГО ЭКРАНА, а не во всём файле: три плитки
+  // в разметке — это два на главном и одна в выборе шаблона, одновременно их никогда
+  // не больше двух. Важно именно одновременное число, потому что каждое стекло — это
+  // отдельный расчёт на GPU в том же кадре.
+  const html = readFileSync(join(appDir, 'index.html'), 'utf8');
+  const countGlassIn = (chunk) => {
+    let n = 0;
+    for (const part of chunk.split('class="').slice(1)) {
+      const cls = part.slice(0, part.indexOf('"')).split(/\s+/);
+      if (cls.some(c => glassClasses.includes(c))) n++;
+    }
+    return n;
+  };
+  const outsideScreens = countGlassIn(html.split('<section id="screen-')[0]);
+  const perScreen = html.split('<section id="screen-').slice(1).map(chunk => {
+    const id = chunk.slice(0, chunk.indexOf('"'));
+    return { id, n: countGlassIn(chunk.split('</section>')[0]) + outsideScreens };
+  });
+  const over = perScreen.filter(x => x.n > 5);
+  assert(over.length === 0,
+    'больше пяти одновременных стёкол на экране: ' +
+    over.map(x => x.id + ' -> ' + x.n).join(', '));
+  console.log('         стёкол одновременно: ' +
+    perScreen.filter(x => x.n > 0).map(x => x.id + ' ' + x.n).join(', '));
+  console.log('         стеклянные классы: ' + glassClasses.join(', ') + ' — все единичные');
 });
 
 check('каждое backdrop-filter имеет -webkit- пару', () => {

@@ -2,8 +2,14 @@
  * Визуальная система: тёмная база, живой градиентный фон, два стеклянных слоя.
  *
  * Решения, продиктованные замерами, а не вкусом:
- *  - backdrop-filter стоит на ЧЕТЫРЁХ элементах: карточка, верхняя панель, плитка
- *    главного экрана, строка шаблона в списке. Бюджет — пять, запас оставлен.
+ *  - backdrop-filter стоит на ЧЕТЫРЁХ селекторах: карточка, верхняя панель, плитка
+ *    главного экрана, поле сборки предложения. Бюджет — пять.
+ *    ВАЖНЕЕ, чем число селекторов: каждый селектор обязан давать МАЛО живых
+ *    элементов. Стекло на строке списка шаблонов было четвёртым слоем и дало восемь
+ *    одновременных стёкол на одном экране — при двадцати шаблонах было бы двадцать.
+ *    Замер при CPU x4: 95-й перцентиль 78 мс даже без анимаций, то есть каждый третий
+ *    кадр пропущен. Строка списка вернулась к тонированной плоскости, а стекло ушло на
+ *    поле сборки — оно на экране всегда одно.
  *    Каждое стекло — отдельный расчёт блюра на GPU; 10+ роняют кадры на среднем
  *    телефоне, 3–5 безопасны. Кнопки оценок сделаны не стеклом, а тонированными.
  *  - блюр 18px и больше нигде не анимируется: анимация blur пересчитывает растр
@@ -16,7 +22,18 @@
  * и интерфейс, который отступает назад, оставляя впереди содержимое.
  */
 
+/* Индекс элемента в списке: из него считается задержка появления. Объявлен явно,
+   потому что переменная, которую ставит код, обязана существовать в палитре —
+   иначе запись уходит в никуда и выглядит как работающая настройка.
+   @property задаёт тип, поэтому подстановка мусора не ломает calc молча. */
+@property --i {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+
 :root {
+  --i: 0;
   /* База светлая и воздушная. Палитра держится в переменных целиком, поэтому
      тёмный вариант — это переопределение этого блока, а не правка правил. */
   --bg-0: #EDF1F8;
@@ -68,6 +85,19 @@
   --ease: cubic-bezier(.32, .72, 0, 1);
   --fast: 180ms;
   --mid: 280ms;
+
+  /* Пружина как функция плавности, а не как библиотека.
+     linear() задаёт кривую точками, поэтому перелёт за 1 и возврат выражаются прямо
+     в CSS — именно это продают библиотеки анимации, и именно это движок уже умеет.
+     Проверено разбором в WebKit и Chromium: значение не откатывается к linear.
+     Замер: WebKit 605.1.15 и Chromium 151 разобрали кривую покадрово. */
+  --spring: linear(0, .006, .026 2.7%, .1 5.5%, .217 8.5%, .557 15.9%, .72 19.5%,
+    .858 23.4%, .96 27.5%, 1.028 32%, 1.06 36.6%, 1.063 41.6%, 1.042 47.4%,
+    1.006 55.4%, .989 68%, 1);
+  /* Мягче: без перелёта, для того что не должно «пружинить» под пальцем. */
+  --spring-soft: linear(0, .02, .08 6%, .3 14%, .55 22%, .76 31%, .89 40%,
+    .96 50%, .99 62%, 1);
+  --slow: 420ms;
 
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -141,6 +171,9 @@ body {
   align-items: center;
   gap: var(--s2);
   padding: 10px var(--s3);
+  /* Панель узкая, а содержимого пять штук. Без min-width:0 на счётчике flex не даёт
+     ему сжаться, и полоса прогресса выдавливается в три пиксела. */
+  min-width: 0;
   background: rgba(255, 255, 255, .58);
   -webkit-backdrop-filter: var(--glass-fx);
   backdrop-filter: var(--glass-fx);
@@ -148,7 +181,8 @@ body {
 }
 
 .progress-track {
-  flex: 1;
+  flex: 1 1 60px;
+  min-width: 48px;
   height: 3px;
   border-radius: 2px;
   background: rgba(14, 21, 38, .1);
@@ -162,7 +196,17 @@ body {
   transition: width var(--mid) var(--ease);
 }
 
-.counter { font-size: 12.5px; color: var(--fg-faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.counter {
+  font-size: 12.5px;
+  color: var(--fg-faint);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  /* Сжимается и обрезается многоточием: длинный счётчик не имеет права ломать панель. */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .pending { font-size: 12.5px; color: var(--hard); white-space: nowrap; }
 
 /* ---------- баннер ---------- */
@@ -234,7 +278,7 @@ body {
   .card,
   .topbar,
   .tile,
-  .pattern-row { background: rgba(255, 255, 255, .97); }
+  .slots { background: rgba(255, 255, 255, .97); }
 }
 
 .card.card-leaving { animation: card-out var(--fast) var(--ease) both; }
@@ -441,7 +485,7 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
-  .aurora span, .decor svg { animation: none; }
+  .aurora span, .decor .drift { animation: none; }
 }
 
 /* ===========================================================================
@@ -526,11 +570,9 @@ body {
   padding: 14px var(--s2);
   border-radius: var(--r-md);
   border: 1px solid var(--glass-edge);
-  /* Четвёртое и последнее стекло. Список шаблонов занимает весь экран, поэтому
-     именно на нём стекло видно дольше всего — здесь оно и оправдано. */
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: var(--glass-fx);
-  backdrop-filter: var(--glass-fx);
+  /* Тонированная плоскость, а НЕ стекло: строк на экране столько, сколько шаблонов.
+     Внутренняя кромка и тень дают ту же материальность, а стоят ноль. */
+  background: var(--glass-fill-strong);
   box-shadow: var(--glass-inset), 0 6px 18px -8px rgba(16, 26, 51, .16);
   cursor: pointer;
   transition: transform var(--fast) var(--ease);
@@ -586,7 +628,12 @@ body {
   padding: 10px;
   border-radius: var(--r-md);
   border: 1px dashed rgba(53, 102, 234, .35);
-  background: rgba(53, 102, 234, .05);
+  /* Четвёртое стекло. Выбрано за то, что на экране оно всегда ровно одно, и
+     собранная фраза стоит прямо над преломлённым фоном — здесь эффект и виден. */
+  background: rgba(255, 255, 255, .42);
+  -webkit-backdrop-filter: var(--glass-fx);
+  backdrop-filter: var(--glass-fx);
+  box-shadow: var(--glass-inset);
 }
 .slots:empty::before {
   content: attr(data-empty);
@@ -668,6 +715,8 @@ a.tag-accent { text-decoration: none; }
   pointer-events: none;
 }
 
+.filters { position: absolute; width: 0; height: 0; overflow: hidden; }
+
 .decor svg {
   position: absolute;
   fill: none;
@@ -676,34 +725,189 @@ a.tag-accent { text-decoration: none; }
   will-change: transform;
 }
 
-.decor-plane {
-  width: 46vmax;
-  height: 46vmax;
+.drift { position: absolute; will-change: transform; }
+
+/* Самолёт: крупный, синий, уходит вверх-вправо за край и возвращается.
+   Уход подчёркнут прозрачностью на дальнем конце — иначе он просто обрезается
+   рамкой, и это читается как баг, а не как полёт. */
+.drift-plane {
+  width: 56vmax;
   right: -8vmax;
-  top: 6vmax;
+  top: 4vmax;
+  animation: takeoff 34s var(--ease) infinite alternate;
+}
+
+.decor-plane {
+  width: 100%;
   stroke: var(--accent);
-  stroke-width: 1.4;
-  opacity: .22;
-  transform: rotate(-8deg);
-  animation: glide 26s var(--ease) infinite alternate;
+  stroke-width: 2.2;
+  opacity: .34;
+}
+/* Осевая линия и двигатели — тоньше контура, иначе спорят с силуэтом. */
+.decor-plane .thin { stroke-width: 1.3; opacity: .6; }
+
+.drift-rings {
+  width: 78vmax;
+  left: -12vmax;
+  bottom: 3vmax;
+  animation: roll 44s var(--ease) infinite alternate;
 }
 
 .decor-rings {
-  width: 62vmax;
-  left: -10vmax;
-  bottom: 4vmax;
+  width: 100%;
   stroke: var(--accent-2);
-  stroke-width: 1.1;
-  opacity: .2;
-  animation: roll 34s var(--ease) infinite alternate;
+  stroke-width: 22;
+  opacity: .22;
 }
 
-@keyframes glide {
-  from { transform: translate3d(0, 0, 0) rotate(-8deg); }
-  to   { transform: translate3d(-4vmax, 5vmax, 0) rotate(-2deg); }
+@keyframes takeoff {
+  0%   { transform: translate3d(0, 12vmax, 0) rotate(6deg); opacity: 1; }
+  45%  { transform: translate3d(10vmax, -22vmax, 0) rotate(20deg); opacity: .35; }
+  55%  { transform: translate3d(11vmax, -26vmax, 0) rotate(22deg); opacity: .2; }
+  100% { transform: translate3d(-6vmax, 20vmax, 0) rotate(-2deg); opacity: 1; }
 }
 
 @keyframes roll {
   from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(5vmax, -3vmax, 0); }
+  to   { transform: translate3d(7vmax, -4vmax, 0); }
+}
+}
+
+/* ===========================================================================
+   Движение.
+
+   Ни одной библиотеки, и это замер, а не позиция: обе возможности, за которые
+   обычно платят килобайтами, движок уже умеет и они проверены в WebKit и Chromium.
+     - пружина: linear() выражает перелёт и возврат точками кривой (--spring выше)
+     - перенос плитки: element.animate() в grammar-ui.js, техника FLIP
+   Анимируются только transform и opacity. filter и backdrop-filter — никогда:
+   каждый кадр пересчитывал бы растр, это проверяется css-perf-тестом.
+   ========================================================================= */
+
+/* Появление списков: задержка растёт по индексу, который ставит JS.
+   Пятнадцать элементов дают 15 * 26ms = 390ms — заметно, но не ожидание. */
+.tile,
+.pattern-row {
+  animation: rise var(--slow) var(--spring-soft) both;
+  animation-delay: calc(var(--i, 0) * 26ms);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(.985); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Нажатие: пружина вместо линейного возврата — палец чувствует материал. */
+.tile:active,
+.pattern-row:active,
+.token:active,
+.btn:active { transition-timing-function: var(--spring); }
+
+.token {
+  /* FLIP переносит плитку через element.animate(), поэтому сам transform здесь
+     не анимируется переходом — иначе две анимации спорили бы за одно свойство. */
+  transition: box-shadow var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.slots .token { box-shadow: 0 2px 8px -2px rgba(53, 102, 234, .35); }
+
+/* Вердикт: рост из ничего с пружиной, без прыжка раскладки. */
+.verdict[data-shown] { animation: pop var(--mid) var(--spring) both; }
+
+@keyframes pop {
+  from { opacity: 0; transform: translate3d(0, 6px, 0) scale(.96); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Промах: короткий сдвиг, не тряска на пол-секунды. */
+.card-wrong { animation: nudge 320ms var(--ease) both; }
+
+@keyframes nudge {
+  0%   { transform: translate3d(0, 0, 0); }
+  18%  { transform: translate3d(-7px, 0, 0); }
+  38%  { transform: translate3d(6px, 0, 0); }
+  58%  { transform: translate3d(-4px, 0, 0); }
+  78%  { transform: translate3d(2px, 0, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* Галочка обводится, а не появляется: рисование читается как событие. */
+.tick { width: 26px; height: 26px; flex: 0 0 auto; }
+.tick path {
+  fill: none;
+  stroke: var(--good-ink);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 34;
+  stroke-dashoffset: 34;
+  animation: draw 380ms var(--ease) forwards;
+}
+
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.verdict-line { display: flex; align-items: center; gap: var(--s1); }
+
+/* ===========================================================================
+   Клавиатура и навигация.
+
+   Оба недостатка настоящие: на телефоне клавиатура закрывает кнопку «Проверить»,
+   а уйти назад можно было только по значку размером с запятую.
+
+   Кнопка «Назад» подписана словом, а не только шевроном: цель нажатия должна быть
+   шириной с палец. Плюс подключается нативная кнопка Telegram — она живёт в чроме
+   приложения и клавиатурой не закрывается вообще.
+   ========================================================================= */
+
+.g-back {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  /* Полоса нажатия во всю высоту панели: попасть должно получаться не глядя. */
+  padding: 10px 10px 10px 0;
+  margin: -10px 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.g-back-chevron { font-size: 22px; line-height: 1; margin-top: -2px; }
+.g-back:active { opacity: .55; transition-timing-function: var(--spring); }
+
+.field { display: flex; align-items: center; gap: var(--s1); }
+.field .typebox { flex: 1 1 auto; min-width: 0; }
+
+/* «Готово» появляется только когда клавиатура открыта: постоянная кнопка рядом с
+   полем читалась бы как второе действие и конкурировала бы с «Проверить». */
+.btn-done {
+  appearance: none;
+  border: 1px solid rgba(53, 102, 234, .3);
+  background: rgba(53, 102, 234, .09);
+  color: var(--easy-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+.btn-done:active { transform: scale(.94); transition-timing-function: var(--spring); }
+
+/* Пока клавиатура открыта, действия прилипают к низу карточки — иначе «Проверить»
+   уезжает под клавиатуру и до него надо доскроллить с закрытыми глазами. */
+.g-actions.keyboard-open {
+  position: sticky;
+  bottom: calc(var(--s2) + var(--safe-b));
+  z-index: 2;
+  padding-top: var(--s2);
+  background: linear-gradient(to top, var(--bg-1) 62%, transparent);
+  margin-inline: calc(var(--s2) * -1);
+  padding-inline: var(--s2);
 }
