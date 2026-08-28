@@ -11,6 +11,9 @@
     this.warnings = payload.warnings || [];
     this.counts = payload.counts || {};
     this.queue = payload.cards.slice();
+    // Исходный объём работы: по нему считается прогресс. Длина очереди для этого
+    // не годится — «не помню» возвращает карточку, и полоса поехала бы назад.
+    this.plannedTotal = this.queue.length;
     this.answered = 0;
     this.current = null;
   }

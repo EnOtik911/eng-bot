@@ -3,14 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070A0F">
 <title>Eng_bot</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 
+<!-- Фон: три пятна, размытые один раз, дальше двигаются только по transform.
+     Именно они дают стеклу что преломлять — на плоской заливке стекло не читается. -->
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+
 <header class="topbar">
   <span id="counter" class="counter"></span>
+  <span class="progress-track"><span id="progress" class="progress-fill"></span></span>
   <span id="pending" class="pending"></span>
 </header>
 
@@ -18,57 +24,64 @@
 
 <main class="stage">
 
-  <section id="screen-loading">
-    <p class="muted center">Загружаю очередь…</p>
+  <section id="screen-loading" class="state center">
+    <div class="state-icon">◌</div>
+    <p class="muted">Загружаю очередь…</p>
   </section>
 
   <section id="screen-card" hidden>
-    <div class="meta">
-      <span id="direction" class="tag tag-accent"></span>
-      <span id="type" class="tag"></span>
-      <span id="layer" class="tag"></span>
-    </div>
+    <article id="card" class="card">
+      <div class="meta">
+        <span id="direction" class="tag tag-accent"></span>
+        <span id="type" class="tag"></span>
+        <span id="layer" class="tag"></span>
+      </div>
 
-    <p id="prompt" class="prompt"></p>
+      <p id="prompt" class="prompt"></p>
 
-    <input id="typebox" class="typebox" type="text" autocomplete="off"
-           autocapitalize="none" spellcheck="false" hidden>
-    <p id="typehint" class="hint" hidden>Набери по-английски и нажми «Показать»</p>
+      <input id="typebox" class="typebox" type="text" autocomplete="off"
+             autocapitalize="none" autocorrect="off" spellcheck="false" hidden>
+      <p id="typehint" class="hint" hidden>Набери по-английски и нажми «Показать»</p>
 
-    <div id="answer-block" hidden>
-      <p id="answer" class="answer"></p>
-      <p id="example" class="example"></p>
-      <p id="example-ru" class="example example-ru"></p>
-    </div>
+      <div id="answer-block" class="answer-block" hidden>
+        <div class="divider"></div>
+        <p id="answer" class="answer"></p>
+        <p id="example" class="example"></p>
+        <p id="example-ru" class="example example-ru"></p>
+      </div>
 
-    <button id="reveal" class="btn btn-wide">Показать</button>
+      <button id="reveal" class="btn btn-primary">Показать</button>
 
-    <div id="ratings" class="ratings" hidden>
-      <button class="btn rate rate-again" data-rating="1">Не помню<span class="key">1</span></button>
-      <button class="btn rate rate-hard"  data-rating="2">С трудом<span class="key">2</span></button>
-      <button class="btn rate rate-good"  data-rating="3">Помню<span class="key">3</span></button>
-      <button class="btn rate rate-easy"  data-rating="4">Легко<span class="key">4</span></button>
-    </div>
+      <div id="ratings" class="ratings" hidden>
+        <button class="btn rate rate-again" data-rating="1">Не помню<span class="key">1</span></button>
+        <button class="btn rate rate-hard"  data-rating="2">С трудом<span class="key">2</span></button>
+        <button class="btn rate rate-good"  data-rating="3">Помню<span class="key">3</span></button>
+        <button class="btn rate rate-easy"  data-rating="4">Легко<span class="key">4</span></button>
+      </div>
+    </article>
   </section>
 
-  <section id="screen-empty" hidden class="center">
+  <section id="screen-empty" hidden class="state center">
+    <div class="state-icon">✓</div>
     <h1>На сегодня всё</h1>
-    <p class="muted">Очередь пуста. Возвращайся завтра или добавь новый батч в inbox.</p>
+    <p class="muted" id="empty-body">Очередь пуста.</p>
   </section>
 
-  <section id="screen-done" hidden class="center">
+  <section id="screen-done" hidden class="state center">
+    <div class="state-icon">✓</div>
     <h1>Сессия закрыта</h1>
     <p id="done-body" class="muted"></p>
     <p id="flush-status" class="hint"></p>
-    <button id="again-session" class="btn btn-wide">Ещё раз</button>
+    <button id="again-session" class="btn btn-quiet">Ещё раз</button>
   </section>
 
-  <section id="screen-error" hidden class="center">
+  <section id="screen-error" hidden class="state center">
+    <div class="state-icon">!</div>
     <h1>Не получилось</h1>
     <p id="error-body" class="muted"></p>
     <p id="error-code" class="hint"></p>
-    <button id="retry" class="btn btn-wide">Повторить</button>
-    <button id="diag" class="btn btn-wide" hidden style="background:var(--surface);color:var(--fg)">Показать диагностику</button>
+    <button id="retry" class="btn btn-primary">Повторить</button>
+    <button id="diag" class="btn btn-quiet" hidden>Показать диагностику</button>
     <pre id="diag-out" class="diag-out" hidden></pre>
   </section>
 

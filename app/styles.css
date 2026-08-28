@@ -1,16 +1,56 @@
-/* Colours come from Telegram theme params at runtime; these are the fallbacks. */
+/**
+ * Визуальная система: тёмная база, живой градиентный фон, два стеклянных слоя.
+ *
+ * Решения, продиктованные замерами, а не вкусом:
+ *  - backdrop-filter стоит ровно на ДВУХ элементах (карточка и верхняя панель).
+ *    Каждое стекло — отдельный расчёт блюра на GPU; 10+ роняют кадры на среднем
+ *    телефоне, 3–5 безопасны. Кнопки оценок сделаны не стеклом, а тонированными.
+ *  - блюр 18px и больше нигде не анимируется: анимация blur пересчитывает растр
+ *    каждый кадр. Двигаются только transform и opacity.
+ *  - фоновые пятна размыты один раз и потом только едут по transform.
+ *  - -webkit-backdrop-filter обязателен: Telegram Desktop на macOS это WebKit.
+ *
+ * Liquid Glass из iOS 26 в CSS не воспроизводится точно. Воспроизводится его логика:
+ * прозрачность слоями, зеркальный блик по верхней кромке, мягкая адаптивная тень,
+ * и интерфейс, который отступает назад, оставляя впереди содержимое.
+ */
+
 :root {
-  --bg: #17212b;
-  --surface: #232e3c;
-  --fg: #f5f5f5;
-  --muted: #8b98a5;
-  --accent: #3390ec;
-  --again: #e05c5c;
-  --hard: #d99a3d;
-  --good: #4fa373;
-  --easy: #3390ec;
-  --radius: 12px;
-  --gap: 16px;
+  /* база */
+  --bg-0: #070A0F;
+  --bg-1: #0C1219;
+  --fg: #F2F5F9;
+  --fg-dim: rgba(242, 245, 249, .74);
+  --fg-faint: rgba(242, 245, 249, .56);
+
+  /* стекло. В тёмной теме iOS стеклянный материал ТЁМНЫЙ полупрозрачный, а не
+     белый тонированный. Белая заливка роняла контраст мелкого текста до 2.5:1 на
+     светлых участках градиента — замерено, не предположено. */
+  --glass-fill: rgba(11, 15, 23, .58);
+  --glass-fill-strong: rgba(11, 15, 23, .72);
+  --glass-edge: rgba(255, 255, 255, .12);
+  --glass-blur: 18px;
+
+  /* акценты */
+  --accent: #5B8CFF;
+  --again: #FF6B6B;
+  --hard: #FFB454;
+  --good: #4ADE80;
+  --easy: #5B8CFF;
+
+  /* сетка 8px */
+  --s1: 8px;  --s2: 16px;  --s3: 24px;  --s4: 32px;  --s5: 48px;  --s6: 64px;
+  --r-lg: 28px;  --r-md: 18px;  --r-sm: 12px;
+
+  /* движение: кривая, близкая к iOS-овской */
+  --ease: cubic-bezier(.32, .72, 0, 1);
+  --fast: 180ms;
+  --mid: 280ms;
+
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
 }
 
 * { box-sizing: border-box; }
@@ -24,146 +64,352 @@
  */
 [hidden] { display: none !important; }
 
-html, body {
-  margin: 0;
-  min-height: 100%;
-  background: var(--bg);
-  color: var(--fg);
-  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
+html, body { margin: 0; min-height: 100%; }
 
 body {
+  background: var(--bg-0);
+  color: var(--fg);
+  font: 400 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right)
-           env(safe-area-inset-bottom) env(safe-area-inset-left);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
 }
+
+/* ---------- живой фон: три пятна, размытые один раз ---------- */
+
+.aurora { position: fixed; inset: -20% -20% -20% -20%; z-index: -1; overflow: hidden; }
+.aurora span {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: .38;
+  will-change: transform;
+}
+.aurora span:nth-child(1) {
+  width: 62vmax; height: 62vmax; left: -18vmax; top: -22vmax;
+  background: radial-gradient(circle, #2B4CCF 0%, rgba(43,76,207,0) 70%);
+  animation: drift-a 34s var(--ease) infinite alternate;
+}
+.aurora span:nth-child(2) {
+  width: 52vmax; height: 52vmax; right: -16vmax; top: 8vmax;
+  background: radial-gradient(circle, #7A3BD6 0%, rgba(122,59,214,0) 70%);
+  animation: drift-b 42s var(--ease) infinite alternate;
+}
+.aurora span:nth-child(3) {
+  width: 46vmax; height: 46vmax; left: 12vmax; bottom: -20vmax;
+  background: radial-gradient(circle, #1E8FA8 0%, rgba(30,143,168,0) 70%);
+  animation: drift-c 38s var(--ease) infinite alternate;
+}
+@keyframes drift-a { to { transform: translate3d(14vmax, 10vmax, 0) scale(1.15); } }
+@keyframes drift-b { to { transform: translate3d(-12vmax, 16vmax, 0) scale(1.1); } }
+@keyframes drift-c { to { transform: translate3d(10vmax, -14vmax, 0) scale(1.2); } }
+
+/* ---------- верхняя панель: стекло №1 ---------- */
 
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
-  justify-content: space-between;
-  gap: var(--gap);
-  padding: 12px 20px 0;
-  font-size: 13px;
-  color: var(--muted);
-  min-height: 32px;
+  align-items: center;
+  gap: var(--s2);
+  padding: 10px var(--s3);
+  background: rgba(7, 10, 15, .55);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
 }
-.pending { color: var(--hard); }
+
+.progress-track {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .1);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), #8B5CF6);
+  transition: width var(--mid) var(--ease);
+}
+
+.counter { font-size: 12.5px; color: var(--fg-faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pending { font-size: 12.5px; color: var(--hard); white-space: nowrap; }
+
+/* ---------- баннер ---------- */
 
 .banner {
-  margin: 8px 20px 0;
-  padding: 10px 14px;
-  border-radius: var(--radius);
+  margin: var(--s2) var(--s3) 0;
+  padding: 11px 15px;
+  border-radius: var(--r-md);
   font-size: 13px;
-  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  line-height: 1.4;
+  color: var(--fg-dim);
+  background: rgba(255, 180, 84, .1);
+  border: 1px solid rgba(255, 180, 84, .22);
+  animation: rise var(--mid) var(--ease) both;
 }
-.banner-warn { background: color-mix(in oklab, var(--hard) 22%, transparent); }
+
+/* ---------- сцена ---------- */
 
 .stage {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 20px;
-  max-width: 640px;
+  padding: var(--s3);
   width: 100%;
+  max-width: 620px;
   margin: 0 auto;
 }
 
 .center { text-align: center; }
-.muted { color: var(--muted); }
-.hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+.muted { color: var(--fg-dim); }
+.hint { color: var(--fg-faint); font-size: 13px; margin: var(--s1) 0 0; }
 
-.meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
-.tag {
-  font-size: 11px;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  padding: 4px 9px;
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
+/* ---------- карточка: стекло №2, единственный герой экрана ---------- */
+
+.card {
+  position: relative;
+  padding: var(--s4) var(--s3) var(--s3);
+  border-radius: var(--r-lg);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    0 24px 60px -20px rgba(0, 0, 0, .7),
+    0 2px 0 0 rgba(255, 255, 255, .05) inset;
+  animation: card-in var(--mid) var(--ease) both;
 }
-.tag-accent { background: var(--accent); color: #fff; }
+
+/* зеркальный блик по верхней кромке — тот самый признак «линзы» */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(255, 255, 255, .5) 25%,
+    rgba(255, 255, 255, .5) 75%, transparent 100%);
+  pointer-events: none;
+}
+
+/* если backdrop-filter не поддержан — не прозрачное ничто, а плотная подложка */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card { background: rgba(13, 18, 27, .97); }
+  .topbar { background: rgba(7, 10, 15, .97); }
+}
+
+.card.card-leaving { animation: card-out var(--fast) var(--ease) both; }
+
+@keyframes card-in {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-out {
+  to { opacity: 0; transform: translate3d(0, -10px, 0) scale(.99); }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- метки ---------- */
+
+.meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: var(--s3); }
+.tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: var(--fg-faint);
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .07);
+}
+.tag-accent {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #7C6BFF);
+  border-color: transparent;
+  box-shadow: 0 4px 14px -4px rgba(91, 140, 255, .8);
+}
+
+/* ---------- содержимое карточки ---------- */
 
 .prompt {
-  font-size: 30px;
-  line-height: 1.25;
-  font-weight: 600;
-  margin: 0 0 20px;
+  font-size: clamp(30px, 8.5vw, 42px);
+  font-weight: 650;
+  line-height: 1.14;
+  letter-spacing: -.022em;
+  margin: 0 0 var(--s3);
   overflow-wrap: anywhere;
+  /* двойной тап по слову не должен подсвечивать полстраницы */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .typebox {
   width: 100%;
-  padding: 14px 16px;
-  font-size: 18px;
-  border-radius: var(--radius);
-  border: 1px solid color-mix(in oklab, var(--fg) 18%, transparent);
-  background: var(--surface);
+  padding: 15px var(--s2);
+  font: inherit;
+  font-size: 17px;
   color: var(--fg);
+  border-radius: var(--r-md);
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: rgba(0, 0, 0, .25);
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
-.typebox:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.typebox::placeholder { color: var(--fg-faint); }
+.typebox:focus {
+  outline: none;
+  border-color: rgba(91, 140, 255, .7);
+  background: rgba(0, 0, 0, .35);
+}
+
+.answer-block { animation: rise var(--mid) var(--ease) both; }
+
+.divider {
+  height: 1px;
+  margin: var(--s3) 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .16), transparent);
+}
 
 .answer {
-  font-size: 24px;
+  font-size: clamp(22px, 6vw, 28px);
   font-weight: 600;
-  margin: 0 0 12px;
-  color: var(--accent);
+  letter-spacing: -.015em;
+  line-height: 1.25;
+  margin: 0 0 var(--s2);
+  color: #A9C4FF;
   overflow-wrap: anywhere;
 }
-.example { margin: 0 0 6px; color: var(--fg); }
-.example-ru { color: var(--muted); font-size: 14px; }
+.example { margin: 0 0 6px; font-size: 15.5px; line-height: 1.5; color: var(--fg-dim); }
+.example-ru { font-size: 14px; color: var(--fg-faint); }
+
+/* ---------- кнопки ---------- */
 
 .btn {
   appearance: none;
+  -webkit-appearance: none;
   border: 0;
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--fg);
   font: inherit;
   font-weight: 600;
-  padding: 14px 18px;
-  min-height: 48px;
+  color: var(--fg);
+  border-radius: var(--r-md);
+  padding: 15px var(--s2);
+  min-height: 52px;
   cursor: pointer;
+  background: rgba(255, 255, 255, .09);
+  border: 1px solid rgba(255, 255, 255, .1);
+  transition: transform var(--fast) var(--ease), background var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
 }
-.btn:active { transform: translateY(1px); }
-.btn-wide { width: 100%; margin-top: 24px; background: var(--accent); color: #fff; }
+.btn:active { transform: scale(.965); }
 
+.btn-primary {
+  width: 100%;
+  margin-top: var(--s3);
+  font-size: 17px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #7C6BFF);
+  border-color: transparent;
+  box-shadow: 0 10px 30px -10px rgba(91, 140, 255, .85);
+}
+.btn-primary:active { box-shadow: 0 6px 18px -10px rgba(91, 140, 255, .9); }
+
+.btn-quiet { width: 100%; margin-top: var(--s2); font-size: 15px; color: var(--fg-dim); }
+
+/* оценки: не стекло — тонировка. Четыре стекла тут стоили бы кадров */
 .ratings {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 24px;
+  margin-top: var(--s3);
 }
-@media (min-width: 520px) {
-  .ratings { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (min-width: 540px) { .ratings { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.rate {
+  position: relative;
+  font-size: 15px;
+  color: #fff;
+  border: 1px solid transparent;
+  /* появляются лестницей: глаз успевает прочитать порядок */
+  animation: rise 240ms var(--ease) both;
 }
-.rate { position: relative; color: #fff; }
-.rate-again { background: var(--again); }
-.rate-hard  { background: var(--hard); }
-.rate-good  { background: var(--good); }
-.rate-easy  { background: var(--easy); }
+.rate:nth-child(1) { animation-delay: 0ms; }
+.rate:nth-child(2) { animation-delay: 45ms; }
+.rate:nth-child(3) { animation-delay: 90ms; }
+.rate:nth-child(4) { animation-delay: 135ms; }
+
+/* Цвета подобраны под порог 4.5:1 с белым текстом, а не по вкусу: светлые
+   варианты давали 3.0-3.7:1. Свечение при этом берётся от яркого тона, поэтому
+   кнопки остаются живыми, а текст читаемым. */
+.rate-again { background: linear-gradient(135deg, rgba(192,57,43,.97),  rgba(169,50,38,.97));  box-shadow: 0 8px 22px -12px rgba(255,107,107,.75); }
+.rate-hard  { background: linear-gradient(135deg, rgba(168,99,26,.97),  rgba(150,86,15,.97));  box-shadow: 0 8px 22px -12px rgba(255,180,84,.7); }
+.rate-good  { background: linear-gradient(135deg, rgba(30,132,73,.97),  rgba(25,112,61,.97));  box-shadow: 0 8px 22px -12px rgba(74,222,128,.7); }
+.rate-easy  { background: linear-gradient(135deg, rgba(46,95,208,.97),  rgba(42,85,187,.97));  box-shadow: 0 8px 22px -12px rgba(91,140,255,.8); }
+
 .key {
-  position: absolute;
-  top: 4px; right: 7px;
-  font-size: 10px;
-  opacity: .65;
-  font-weight: 400;
+  position: absolute; top: 5px; right: 8px;
+  font-size: 10px; font-weight: 500; opacity: .55;
 }
 @media (pointer: coarse) { .key { display: none; } }
 
+/* ---------- экраны состояний ---------- */
+
+.state {
+  padding: var(--s5) var(--s3);
+  animation: card-in 360ms var(--ease) both;
+}
+.state h1 {
+  font-size: clamp(26px, 7vw, 34px);
+  font-weight: 650;
+  letter-spacing: -.02em;
+  margin: 0 0 var(--s2);
+}
+.state-icon {
+  width: 68px; height: 68px;
+  margin: 0 auto var(--s3);
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 30px;
+  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-edge);
+  box-shadow: 0 12px 34px -14px rgba(0, 0, 0, .8);
+}
+
 .diag-out {
-  margin-top: 20px;
-  padding: 14px;
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.45;
+  margin-top: var(--s3);
+  padding: var(--s2);
+  border-radius: var(--r-md);
+  background: rgba(0, 0, 0, .4);
+  border: 1px solid rgba(255, 255, 255, .08);
+  color: var(--fg-dim);
+  font: 400 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
   text-align: left;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  max-height: 50vh;
+  max-height: 48vh;
   overflow-y: auto;
+}
+
+/* ---------- уважение к настройке «меньше движения» ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .aurora span { animation: none; }
 }

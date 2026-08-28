@@ -19,7 +19,7 @@ console.log(bad? bad+" file(s) with syntax errors" : "  "+files.length+" files p
 process.exit(bad?1:0);' || fail=1
 echo
 
-for t in test/fsrs.test.mjs test/session.test.mjs test/auth.test.mjs test/import-format.test.mjs test/css-hidden.test.mjs test/session-server.test.mjs; do
+for t in test/fsrs.test.mjs test/session.test.mjs test/auth.test.mjs test/import-format.test.mjs test/css-hidden.test.mjs test/session-server.test.mjs test/contrast.test.mjs test/css-perf.test.mjs; do
   echo "── $t"
   node "$t" || fail=1
   echo

@@ -30,6 +30,17 @@
       .forEach(function (id) { el(id).hidden = id !== screen; });
   }
 
+  /**
+   * Прогресс считается от того, сколько работы было в начале сессии, а не от
+   * текущей длины очереди: «не помню» возвращает карточку, и полоса не должна
+   * ехать назад — иначе она врёт про пройденное.
+   */
+  function renderProgress() {
+    var total = session.plannedTotal || 1;
+    var done = Math.min(session.answered, total);
+    el('progress').style.width = Math.round(done / total * 100) + '%';
+  }
+
   function renderCounters() {
     var newPart = T.counterNew + ' ' + (session.counts.new_in_session || 0);
     if (session.counts.new_introduced_today) {
@@ -65,6 +76,7 @@
     el('ratings').hidden = true;
 
     renderCounters();
+    renderProgress();
     show('screen-card');
   }
 
@@ -84,11 +96,32 @@
       if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
     }
     if (session.remaining() === 0) { finish(); return; }
-    session.next();
-    renderCard();
+    advance();
+  }
+
+  /**
+   * Смена карточки. Где есть View Transitions — отдаём анимацию браузеру: она идёт
+   * на GPU и стоит дешевле любой библиотеки. Где нет — короткий уход по CSS-классу.
+   * Обе ветки заканчиваются одинаково, поэтому логика не зависит от поддержки.
+   */
+  function advance() {
+    var swap = function () { session.next(); renderCard(); };
+    if (document.startViewTransition && !prefersReducedMotion()) {
+      document.startViewTransition(swap);
+      return;
+    }
+    var card = el('card');
+    card.classList.add('card-leaving');
+    setTimeout(function () { card.classList.remove('card-leaving'); swap(); }, 180);
+  }
+
+  function prefersReducedMotion() {
+    return window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   function finish() {
+    el('progress').style.width = '100%';
     el('done-body').textContent = T.doneBody(session ? session.answered : 0);
     show('screen-done');
     flush();
@@ -224,7 +257,11 @@
     if (session.warnings.indexOf('trigger_stale') >= 0) setBanner(T.triggerStale, 'warn');
     else if (session.warnings.indexOf('trigger_never_ran') >= 0) setBanner(T.triggerNever, 'warn');
 
-    if (!session.queue.length) { show('screen-empty'); return; }
+    if (!session.queue.length) {
+      el('empty-body').textContent = T.emptyBody;
+      show('screen-empty');
+      return;
+    }
     session.next();
     renderCard();
   }
