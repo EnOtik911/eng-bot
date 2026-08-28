@@ -16,7 +16,6 @@ content is generated offline and imported as TSV.
 | `data/` | Seed batches in the TSV interchange format |
 | `kb/` | Knowledge base — plain Markdown, readable without any tooling |
 | `docs/` | Deployment guide and ADRs |
-| `tech-bank/` | Study notes on the stack (Russian text, English terms) |
 | `.context/` | Team working memory |
 
 ## Stack

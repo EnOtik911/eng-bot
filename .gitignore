@@ -1,6 +1,20 @@
+# --- секреты и локальные значения: никогда в репозиторий ---
+keys*
+secrets*
+*.key
+*.pem
+.env
+.env.*
+*.local.*
 .clasp.json
+.clasprc.json
+
+# --- личные учебные заметки: живут только локально ---
+tech-bank/
+
+# --- рабочий мусор ---
 node_modules/
 .DS_Store
 .lavish/
-app/config.local.js
 .playwright-mcp/
+app/config.local.js
