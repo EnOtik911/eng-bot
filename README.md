@@ -27,7 +27,13 @@ Scheduler: FSRS-6 with default parameters, desired retention configurable in the
 
 ## Getting started
 
-See [docs/deploy.md](docs/deploy.md). Nine steps, each with a check that proves it worked.
+See [docs/deploy.md](docs/deploy.md) — nine steps, each with a check that proves it
+worked, plus troubleshooting and the redeploy trap (`clasp push` alone does not change
+what `/exec` serves).
+
+That file is deliberately written in Russian while the rest of the documentation is in
+English: it is a runbook the owner executes, not prose a reviewer reads. Commands, keys
+and identifiers stay verbatim.
 
 ## Tests
 

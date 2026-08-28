@@ -1,29 +1,70 @@
-# Deploy
+# Деплой
 
-Nine steps. Each has a check that proves it worked — if the check fails, do not move on.
-Everything here is reproducible from an empty Google account.
+> Язык этого файла — русский, в отличие от остальной документации в репозитории.
+> Причина: это runbook, который выполняет владелец, а не текст, который читает
+> ревьюер. Команды, ключи и идентификаторы остаются в оригинале — их надо
+> копировать буквально, а не переводить.
 
-## 0. Prerequisites
+Девять шагов. У каждого есть проверка. **Если проверка не прошла — не переходи
+к следующему шагу**, иначе ошибка всплывёт через три шага и в другом месте.
 
-- A personal Google account (not a Workspace one — an admin can block `Anyone` access
-  on Web App deployments, which this design requires).
-- `clasp`: `npm i -g @google/clasp`, then `clasp login`.
+Всё воспроизводимо с нуля на чистом Google-аккаунте.
 
-## 1. Spreadsheet
+---
 
-Create a blank spreadsheet named `Eng_bot DB`. Copy its id from the URL:
-`docs.google.com/spreadsheets/d/<THIS_PART>/edit`.
+## Что понадобится до начала
 
-**Check:** you have a 44-character id.
+- **Личный Google-аккаунт**, не корпоративный Workspace. В Workspace админ может
+  запрещать деплой Web App с доступом `Anyone`, а без этого схема не работает вообще.
+- **clasp** — инструмент выкладки Apps Script:
+  ```bash
+  npm i -g @google/clasp
+  clasp login
+  ```
+  `clasp login` откроет браузер и попросит доступ к Apps Script. Если предложит
+  включить Apps Script API — включи, ссылка будет в тексте ошибки.
 
-## 2. Bot
+Ориентировочно 40 минут, из них половина — ожидание BotFather и первых деплоев.
 
-BotFather → `/newbot`. Keep the token.
+---
 
-**Check:** `curl "https://api.telegram.org/bot<TOKEN>/getMe"` returns `"ok":true` with the
-bot username.
+## Шаг 1. Таблица
 
-## 3. Apps Script project
+Создай пустую таблицу с названием `Eng_bot DB`.
+
+Скопируй её id из адресной строки — это часть между `/d/` и `/edit`:
+
+```
+docs.google.com/spreadsheets/d/1AbC...XyZ/edit
+                              ^^^^^^^^^^^ вот это
+```
+
+**Проверка:** у тебя в буфере строка примерно из 44 символов, без слэшей.
+
+---
+
+## Шаг 2. Бот
+
+В Telegram напиши [@BotFather](https://t.me/BotFather) → `/newbot`. Он спросит имя
+и username. Username должен заканчиваться на `bot`.
+
+В ответ придёт токен вида `123456789:AAH...`.
+
+**Проверка:** подставь токен и выполни в терминале —
+
+```bash
+curl "https://api.telegram.org/bot<ТОКЕН>/getMe"
+```
+
+Ответ должен содержать `"ok":true` и username твоего бота. Если `"ok":false` —
+токен скопирован с лишним пробелом или обрезан.
+
+Заодно узнай свой numeric id: напиши [@userinfobot](https://t.me/userinfobot), он
+пришлёт число. Оно понадобится на шаге 4.
+
+---
+
+## Шаг 3. Проект Apps Script
 
 ```bash
 cd gas
@@ -31,107 +72,267 @@ clasp create --type standalone --title "Eng_bot"
 clasp push -f
 ```
 
-Standalone, not container-bound: the code reads the sheet by id, so the script is not
-tied to one document and the repository stays the source of truth.
+`standalone`, а не привязанный к таблице: код обращается к таблице по id, поэтому
+скрипт не привязан к одному документу, и источником истины остаётся репозиторий.
 
-**Check:** `clasp open` shows all the `.gs` files in the editor.
+Команда создаст файл `.clasp.json` — он уже в `.gitignore`, потому что содержит
+id твоего личного проекта.
 
-## 4. Script Properties
+**Проверка:** `clasp open` открывает редактор, и в нём видны все 11 файлов
+`.gs` плюс `appsscript.json`. Если файлов меньше — `clasp push -f` выполнился
+не из папки `gas`.
 
-Project Settings → Script Properties. Add:
+---
 
-| Key | Value |
+## Шаг 4. Script Properties
+
+В редакторе: слева **Project Settings** (шестерёнка) → прокрути до
+**Script Properties** → **Add script property**. Добавь три:
+
+| Ключ | Значение |
 |---|---|
-| `BOT_TOKEN` | from step 2 |
-| `SHEET_ID` | from step 1 |
-| `ALLOWLIST` | your Telegram numeric id (get it from `@userinfobot`) |
+| `BOT_TOKEN` | токен из шага 2 |
+| `SHEET_ID` | id таблицы из шага 1 |
+| `ALLOWLIST` | твой numeric id из шага 2 |
 
-**Check:** run `selfCheck` in the editor. The log shows three `ok` lines (lengths only,
-never the values) and the spreadsheet name.
+Секреты живут только здесь. В таблице их нет, в репозитории их нет — поэтому
+таблицу можно показывать кому угодно, не потеряв бота.
 
-Then run `setupSpreadsheet`.
+**Проверка:** вернись в редактор кода, выбери в выпадающем списке функцию
+`selfCheck`, нажми **Run**. При первом запуске Google попросит разрешения — это
+нормально, разрешай (экран «Google hasn't verified this app» → Advanced →
+Go to Eng_bot).
 
-**Check:** the spreadsheet now has the tabs `cards`, `settings`, `inbox`, `rejects`,
-`flush_log`, `review_log_<year>`, and `settings` holds ten seeded keys.
+В журнале выполнения должно быть:
 
-## 5. Web App deployment
-
-Deploy → New deployment → type **Web app**.
-Execute as: **Me**. Who has access: **Anyone**.
-
-Copy the `/exec` URL. Add it to Script Properties as `WEB_APP_URL`.
-
-**Check:** open `<EXEC_URL>?action=ping` in a browser — you get
-`{"ok":true,"pong":"…"}`. Then open `<EXEC_URL>?action=session` — you get
-`{"ok":false,"code":"BAD_INIT_DATA"}`. **That failure is the success criterion:**
-the endpoint is public and refuses everyone without a signature from your bot.
-
-## 6. GitHub Pages
-
-Push this repository to GitHub (public). Settings → Pages → Source: `main`, folder `/`
-(root).
-
-Then edit `app/config.js` and paste the `/exec` URL into `WEB_APP_URL`. Commit and push.
-
-**Check:** `https://<user>.github.io/<repo>/app/` opens and shows «Загружаю очередь…».
-Outside Telegram it will then fail with an auth message — expected, there is no initData
-in a plain browser.
-
-## 7. Mini App URL
-
-BotFather → `/mybots` → your bot → Bot Settings → Menu Button → paste the Pages URL
-from step 6. Also add it to Script Properties as `MINI_APP_URL` so the daily ping can
-attach a launch button.
-
-**Check:** the menu button in the bot opens the app and a card appears (after step 9
-seeds content).
-
-## 8. Webhook
-
-Run `setWebhook` in the editor.
-
-**Check:** run `menuCheckWebhook` from the spreadsheet menu, or
-`curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"` — `url` is filled,
-`pending_update_count` is 0, no `last_error_message`. Then send `/start` to the bot;
-it replies with a launch button.
-
-## 9. Triggers and first content
-
-Run `installTriggers`.
-
-Then — and this cannot be done from code — open the trigger list (clock icon), and for
-each trigger set **Failure notification settings → Notify me immediately**. Without it a
-dead trigger stays silent until a daily summary email that is easy to miss.
-
-Seed content: spreadsheet menu → `Eng_bot` → «Засеять стартовый батч», then
-«Импортировать батч из inbox».
-
-**Check:** the dialog reports 20 accepted, 0 rejected, 0 duplicates. The `cards` tab holds
-40 rows (20 recognition in state `new`, 20 production in state `locked`). Open the Mini App
-— 6 cards are offered, matching `daily_new_target`.
-
-## Tuning afterwards
-
-Everything below changes in the `settings` tab and takes effect on the next session,
-with no deploy:
-
-| Key | Default | Effect |
-|---|---|---|
-| `daily_new_target` | 6 | New cards per session |
-| `desired_retention` | 0.85 | The strongest lever on daily load |
-| `session_size_cap` | 120 | Hard ceiling on one session |
-| `leech_threshold` | 5 | Lapses before a card is pulled out |
-| `unlock_interval_days` | 21 | When a production card unlocks |
-| `ping_hour` | 8 | Daily ping hour (re-run `installTriggers` after changing) |
-
-## Tests
-
-```bash
-node test/fsrs.test.mjs
-node test/session.test.mjs
-node test/auth.test.mjs
-node test/load-model.mjs      # not a test: prints the review-load model
+```
+BOT_TOKEN: ok (46 chars)
+SHEET_ID: ok (44 chars)
+ALLOWLIST: ok (9 chars)
+spreadsheet: ok — "Eng_bot DB"
+tabs: Sheet1
 ```
 
-No install step. The tests read `gas/*.gs` and `app/*.js` directly, so there is exactly
-one copy of the scheduler and the auth scheme.
+Длины могут отличаться. Значения не печатаются никогда — это специально.
+
+Теперь запусти функцию `setupSpreadsheet`.
+
+**Проверка:** открой таблицу. В ней появились листы `cards`, `settings`, `inbox`,
+`rejects`, `flush_log`, `review_log_2026`. На листе `settings` десять строк с
+ключами и значениями.
+
+---
+
+## Шаг 5. Деплой Web App
+
+В редакторе справа сверху: **Deploy** → **New deployment** → шестерёнка возле
+«Select type» → **Web app**.
+
+Заполни:
+
+- **Description** — любое, например `v1`
+- **Execute as** — **Me**
+- **Who has access** — **Anyone**
+
+`Anyone` обязателен: Telegram и браузер обращаются к этому URL анонимно.
+Это не дырка — см. проверку ниже.
+
+Скопируй **Web app URL**, он заканчивается на `/exec`.
+
+Добавь его в Script Properties как `WEB_APP_URL`.
+
+**Проверка, часть 1:** открой в браузере `<URL>?action=ping`. Должно вернуться:
+
+```json
+{"ok":true,"pong":"2026-08-28T..."}
+```
+
+**Проверка, часть 2:** открой `<URL>?action=session`. Должно вернуться:
+
+```json
+{"ok":false,"code":"BAD_INIT_DATA"}
+```
+
+**Этот отказ и есть критерий успеха.** Endpoint публичный и отказывает всем, у кого
+нет подписи от твоего бота. Если вместо этого пришли данные — валидация не работает,
+дальше идти нельзя.
+
+---
+
+## Шаг 6. GitHub Pages
+
+Запушь репозиторий на GitHub, публичным. Бесплатные Pages работают только с
+публичного репозитория.
+
+```bash
+git remote add origin git@github.com:<твой-логин>/eng-bot.git
+git push -u origin main
+```
+
+В настройках репозитория: **Settings** → **Pages** → Source: **Deploy from a
+branch**, Branch: `main`, папка `/ (root)` → **Save**.
+
+Через 1–2 минуты сайт поднимется по адресу
+`https://<логин>.github.io/eng-bot/app/`.
+
+Теперь впиши URL из шага 5 в [app/config.js](../app/config.js):
+
+```javascript
+WEB_APP_URL: 'https://script.google.com/macros/s/AKfy.../exec',
+```
+
+Закоммить и запушь.
+
+**Проверка:** открой `https://<логин>.github.io/eng-bot/app/` в обычном браузере.
+Появится «Загружаю очередь…», затем сообщение про данные запуска. Это правильно:
+вне Telegram никакого `initData` нет. Главное — страница загрузилась и стили
+применились.
+
+---
+
+## Шаг 7. Mini App в боте
+
+BotFather → `/mybots` → выбери бота → **Bot Settings** → **Menu Button** →
+**Configure menu button** → пришли URL из шага 6 → пришли подпись кнопки,
+например `Тренажёр`.
+
+Добавь этот же URL в Script Properties как `MINI_APP_URL` — без него ежедневный
+пинг не сможет прикрепить кнопку запуска.
+
+**Проверка:** открой чат с ботом. Внизу появилась кнопка меню с твоей подписью.
+Пока не нажимай — контента ещё нет, он появится на шаге 9.
+
+---
+
+## Шаг 8. Webhook
+
+В редакторе Apps Script запусти функцию `setWebhook`.
+
+**Проверка:**
+
+```bash
+curl "https://api.telegram.org/bot<ТОКЕН>/getWebhookInfo"
+```
+
+В ответе `url` заполнен, `pending_update_count` равен 0, поля
+`last_error_message` нет.
+
+Затем напиши боту `/start` — он должен ответить сообщением с кнопкой запуска.
+Если молчит: проверь, что твой id в `ALLOWLIST` совпадает с тем, что прислал
+@userinfobot (лишний пробел ломает сверку).
+
+---
+
+## Шаг 9. Триггеры и первый контент
+
+Запусти функцию `installTriggers`.
+
+Дальше — **единственное действие, которое нельзя выполнить кодом.** Открой список
+триггеров (иконка часов слева), и для **каждого** из двух триггеров: три точки
+справа → **Edit notifications** → выбери **Notify me immediately** → Save.
+
+Зачем: если триггер упадёт, Google по умолчанию сообщит суточной сводкой на почту,
+которую легко пропустить. Именно так бот тихо умирает на неделю. Приложение
+дополнительно покажет предупреждение, если триггер не отчитывался больше 36 часов,
+но письмо — первая линия.
+
+Теперь контент. В таблице появилось меню **Eng_bot** (если нет — перезагрузи
+страницу таблицы):
+
+1. **Eng_bot** → **Засеять стартовый батч** — положит 20 строк в лист `inbox`.
+2. **Eng_bot** → **Импортировать батч из inbox**.
+
+**Проверка:** диалог сообщает `Принято единиц: 20`, `Создано карточек: 40`,
+`Отклонено: 0`, `Дубликатов: 0`. На листе `cards` — 40 строк: 20 со `state = new`
+и `direction = recog`, 20 со `state = locked` и `direction = prod`.
+
+**Финальная проверка:** открой Mini App из бота. Появится карточка, сверху
+счётчик «долг 0 · новые 6 · осталось 6». Пройди все шесть, нажми оценки. На экране
+«Сессия закрыта» должно быть «Отправлено».
+
+Вернись в таблицу: на листе `review_log_2026` появились 6 строк, а у соответствующих
+карточек в `cards` заполнились `stability`, `difficulty`, `due`.
+
+**Вот это и есть работающая система.** Всё, что было до — код, прошедший проверку
+в изоляции.
+
+---
+
+## Что менять дальше без деплоя
+
+Лист `settings`, вступает в силу с следующей сессии:
+
+| Ключ | По умолчанию | На что влияет |
+|---|---|---|
+| `daily_new_target` | 6 | Новых карточек за сессию |
+| `desired_retention` | 0.85 | Самый сильный рычаг на дневную нагрузку. 0.90 даёт примерно на треть больше повторений |
+| `session_size_cap` | 120 | Жёсткий потолок одной сессии |
+| `leech_threshold` | 5 | Промахов до снятия карточки с оборота |
+| `unlock_interval_days` | 21 | Когда открывается производственная карточка |
+| `ping_hour` | 8 | Час ежедневного пинга. **После изменения перезапусти `installTriggers`** и снова выставь Notify me immediately |
+| `timezone` | Europe/Moscow | Зона для вычисления «сегодня» |
+
+---
+
+## Повторный деплой после правок в коде
+
+Здесь ловушка, на которой теряют часы:
+
+```bash
+cd gas && clasp push -f
+```
+
+**`clasp push` не меняет то, что отдаёт `/exec`.** Он обновляет только код в
+редакторе. Чтобы обновилась работающая версия:
+
+**Deploy** → **Manage deployments** → карандаш у существующего деплоя →
+Version: **New version** → **Deploy**.
+
+URL при этом не меняется — webhook и Mini App переустанавливать не нужно.
+
+Живая проверка после каждого редеплоя:
+
+```bash
+curl "$EXEC_URL?action=ping"        # ожидается {"ok":true,...}
+curl "$EXEC_URL?action=session"     # ожидается {"ok":false,"code":"BAD_INIT_DATA"}
+```
+
+Правки в `app/` живут отдельно: там достаточно `git push`, Pages пересоберёт сам
+за минуту. Если браузер отдаёт старую версию — жёсткая перезагрузка, а в Telegram
+на iOS иногда требуется закрыть Mini App полностью и открыть заново.
+
+---
+
+## Если что-то не работает
+
+| Симптом | Причина | Что делать |
+|---|---|---|
+| В браузере ошибка CORS при отправке пачки | В запрос попал кастомный заголовок или `Content-Type: application/json` | Apps Script не отвечает на `OPTIONS`, и заголовками на сервере это не лечится. Только «простые» запросы — см. [ADR-03](adr/ADR-03-simple-requests-only.md) |
+| `?action=session` возвращает данные без initData | Валидация не работает | Проверь, что `BOT_TOKEN` в Script Properties совпадает с токеном бота, из которого открываешь приложение |
+| Приложение пишет «Открой из бота» внутри Telegram | Mini App URL в BotFather не совпадает с адресом Pages | Сверь адреса посимвольно, включая `/app/` на конце |
+| `/start` игнорируется | `ALLOWLIST` не совпадает с твоим id | Пробелы и переводы строк ломают сверку |
+| Пинг не приходит | Триггер не установлен или упал | `listTriggers` в редакторе; меню таблицы → «Проверить webhook»; посмотри `last_trigger_run` на листе `settings` |
+| Импорт отклоняет строки | Формат батча | Причина по каждой строке — на листе `rejects`. Правила: [kb/prompts/batch-generation.md](../kb/prompts/batch-generation.md) |
+| Оценки не сохраняются | Пачка не ушла | Открой приложение снова: буфер лежит в `localStorage` и отправляется при следующем запуске. Если не уходит — смотри код ошибки на экране «Сессия закрыта» |
+| Неудачный батч засорил базу | — | Найди `source_batch` в листе `cards`, выполни `rollbackBatch('imp_...')` в редакторе. Удалит все карточки этой партии |
+
+---
+
+## Тесты
+
+```bash
+./test/run-all.sh
+```
+
+Четыре набора плюс проверка синтаксиса, 40 утверждений, ноль зависимостей —
+тесты читают `gas/*.gs` и `app/*.js` напрямую, поэтому у планировщика и схемы
+авторизации существует ровно одна копия.
+
+Отдельно, не тест, а измерение:
+
+```bash
+node test/load-model.mjs
+```
+
+Печатает кривую нагрузки повторений. Дефолт `daily_new_target = 6` взят из его
+вывода, а не из формулы.
