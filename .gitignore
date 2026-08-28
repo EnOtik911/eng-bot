@@ -3,3 +3,4 @@ node_modules/
 .DS_Store
 .lavish/
 app/config.local.js
+.playwright-mcp/
