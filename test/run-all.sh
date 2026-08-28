@@ -4,6 +4,10 @@ set -u
 cd "$(dirname "$0")/.."
 fail=0
 
+echo "── bundle: dist/all-in-one.gs is in sync with gas/"
+node test/build-all-in-one.mjs --check || fail=1
+echo
+
 echo "── syntax: every .gs and .js file parses"
 node -e '
 const fs=require("fs");let bad=0;
