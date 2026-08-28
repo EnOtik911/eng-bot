@@ -34,6 +34,18 @@ That file is deliberately written in Russian while the rest of the documentation
 English: it is a runbook the owner executes, not prose a reviewer reads. Commands, keys
 and identifiers stay verbatim.
 
+## Documents
+
+| File | What it is |
+|---|---|
+| [docs/deploy.md](docs/deploy.md) | Deployment runbook, nine steps with a check each, plus troubleshooting |
+| [docs/guide.md](docs/guide.md) | How to use the trainer: what the four ratings do, the card lifecycle, the import loop, every setting and its consequence |
+| [docs/positioning.md](docs/positioning.md) | Honest comparison against Anki, Quizlet, Memrise and Clozemaster — including the nine things they do and this does not |
+| [docs/adr/](docs/adr/) | Architecture decisions with alternatives and cost of being wrong |
+
+Both `guide.md` and `deploy.md` are in Russian on purpose: they are documents the owner
+executes, not prose a reviewer reads.
+
 ## Tests
 
 ```bash
