@@ -8,12 +8,12 @@
 | Section | Lines |
 |---|---|
 | About the project | 19-29 |
-| Tasks and status | 32-44 |
-| Environment | 47-62 |
-| Architecture | 65-90 |
-| Restart & live probe | 93-108 |
-| ADR index | 111-117 |
-| Key code fragments | 120-135 |
+| Tasks and status | 32-45 |
+| Environment | 48-63 |
+| Architecture | 66-91 |
+| Restart & live probe | 94-109 |
+| ADR index | 112-118 |
+| Key code fragments | 121-136 |
 
 ## About the project
 
@@ -34,11 +34,12 @@ Done: discovery (GATE 1), specification (GATE 2), vocabulary block deployed and
 verified live, light glass visual system, generated user guide, grammar block
 (v0.6.0) complete and green locally.
 
-Where we left off: the grammar block is committed but NOT deployed. Deploying it
-needs three owner actions no agent can take — `clasp push -f` plus a redeploy, a
-`git push` for the Pages client, and three menu runs in the sheet (setup, seed,
-import). Until then the home screen shows grammar as unavailable and vocabulary
-keeps working; that degradation is deliberate and tested.
+Where we left off: grammar code is deployed on both halves — Pages at v0.6.0, Apps
+Script deployment at @8, probed live. What remains is three menu runs in the
+spreadsheet (setup, seed, import) which no agent can do: `clasp run` needs a GCP
+project and an API-executable deployment this project deliberately lacks. Until they
+run, the home screen shows grammar as unavailable and vocabulary keeps working; that
+degradation is deliberate and tested.
 
 Still open from earlier: the bot token pasted in chat has never been confirmed
 revoked in BotFather.

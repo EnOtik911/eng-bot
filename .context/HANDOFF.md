@@ -67,19 +67,27 @@ sequencing decision was taken on evidence rather than referred back.
 
 ## Next actionable step — owner only
 
-1. `cd gas && clasp push -f`, then Deploy -> Manage deployments -> edit -> New version.
-   A push alone does not change what `/exec` serves.
-2. DONE — client pushed and live on Pages at v0.6.0 (probed: answer.js, grammar.js,
-   grammar-ui.js all 200). The live backend still answers
-   `{"ok":false,"code":"BAD_REQUEST","message":"unknown action: grammar"}`, which is the
-   non-fatal branch, so the home screen shows grammar unavailable and vocabulary works.
-   That path is traced in code and the backend response confirmed by curl, but it has
-   NOT been exercised in a browser.
-3. In the sheet: menu -> «Первичная настройка листов», then «Засеять грамматику», then
-   «Импортировать грамматику». Expected: 8 rows in `patterns`, 96 in `grammar_items`,
-   0 on `grammar_rejects`.
+1. DONE — backend live at V8. `clasp push -f` was already done by the owner; the
+   deployment was still pinned to @7, so `create-version` + `redeploy <id> -V 8` was
+   run. Probe: `?action=grammar` now returns `BAD_INIT_DATA` (action recognised, fell
+   through to auth) instead of `unknown action: grammar`. `redeploy` takes the id
+   POSITIONALLY, not via `-i`.
+2. DONE — client live on Pages at v0.6.0 (probed: answer.js, grammar.js, grammar-ui.js
+   all 200). Both halves are now on the new version.
+3. PENDING — owner only, in the sheet: menu -> «Первичная настройка листов», then
+   «Засеять грамматику», then «Импортировать грамматику». Expected: 8 rows in
+   `patterns`, 96 in `grammar_items`, 0 on `grammar_rejects`. Cannot be done from the
+   terminal: `clasp run` needs a GCP project and an API-executable deployment that this
+   project deliberately does not have.
 4. Live probe: open the app, home screen shows a grammar count; run one mixed round;
    read `patterns` and `grammar_log_2026` — the round must be there with a derived rating.
+
+Runbook defect found while the owner was executing step 10 and fixed in the same pass:
+`docs/deploy.md` used a `$EXEC_URL` variable it never told him to set, so `curl -s`
+printed nothing and looked like a dead server. The doc now sets it from `app/config.js`,
+says explicitly that empty output means the command did not run, and the command was
+verified by running it in both bash and zsh. Same class as the `bot<ТОКЕН>` angle
+brackets: a placeholder that reads as literal.
 
 Still outstanding from earlier tasks: revoke the leaked bot token; run
 `backfillFirstReview()`; run `runTestPing` to clear the stale-trigger banner.

@@ -534,16 +534,44 @@ curl "https://api.telegram.org/bot$TOKEN/getWebhookInfo"
 деплоя (Deploy → Manage deployments → карандаш → New version). Без этого `/exec`
 продолжит отдавать старый код — та же ловушка, что описана ниже.
 
-Проверить, что бэкенд обновился, можно одной командой:
+Проверить, что бэкенд обновился, можно одной командой. Сначала задай адрес — он лежит
+в `app/config.js`, доставать руками не нужно:
 
 ```bash
-curl -sL "$EXEC_URL?action=grammar"
+cd ~/Documents/Life/Eng_bot
+export EXEC_URL="$(grep -o "https://script.google.com[^']*" app/config.js)"
+echo "$EXEC_URL"
+```
+
+Вторая строка должна напечатать адрес, оканчивающийся на `/exec`. Если напечатала
+пустоту — ты не в той папке. **Пустой вывод любой команды ниже означает «команда не
+выполнилась», а не «сервер не отвечает»:** `curl -s` молчит и про свои ошибки тоже.
+
+Дальше:
+
+```bash
+curl -sL "$EXEC_URL?action=grammar"; echo
 ```
 
 | Что вернулось | Что это значит |
 |---|---|
 | `{"ok":false,"code":"BAD_INIT_DATA"}` | новый код на месте, всё правильно |
 | `{"ok":false,"code":"BAD_REQUEST","message":"unknown action: grammar"}` | версия деплоя не пересоздана, вернись на абзац выше |
+
+Если `clasp` отвечает `command not found` — ты в `bash`, а alias прописан в `~/.zshrc`.
+Либо `exit` и вернись в zsh, либо вызывай напрямую: `npx -y @google/clasp@latest ...`.
+
+То же самое через терминал вместо мышки, если пересоздавать версию руками не хочется:
+
+```bash
+cd ~/Documents/Life/Eng_bot/gas
+clasp push -f
+clasp create-version "что изменилось"
+clasp list-deployments          # возьми id, который совпадает с адресом в app/config.js
+clasp redeploy <ID> -V <НОМЕР_НОВОЙ_ВЕРСИИ> -d "что изменилось"
+```
+
+Синтаксис именно такой: `redeploy` берёт id **позиционным** аргументом, а не через `-i`.
 
 Дальше три пункта меню в таблице, строго в этом порядке:
 
@@ -623,8 +651,10 @@ URL при этом не меняется — webhook и Mini App переуст
 Живая проверка после каждого редеплоя:
 
 ```bash
-curl "$EXEC_URL?action=ping"        # ожидается {"ok":true,...}
-curl "$EXEC_URL?action=session"     # ожидается {"ok":false,"code":"BAD_INIT_DATA"}
+# $EXEC_URL задаётся так (из корня репозитория, работает и в bash, и в zsh):
+#   export EXEC_URL="$(grep -o "https://script.google.com[^']*" app/config.js)"
+curl -sL "$EXEC_URL?action=ping"; echo      # ожидается {"ok":true,...}
+curl -sL "$EXEC_URL?action=session"; echo   # ожидается {"ok":false,"code":"BAD_INIT_DATA"}
 ```
 
 Правки в `app/` живут отдельно: там достаточно `git push`, Pages пересоберёт сам
