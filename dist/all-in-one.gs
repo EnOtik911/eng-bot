@@ -423,8 +423,13 @@ function flushRecord_(batchId, count) {
  * Scheme (core.telegram.org/bots/webapps):
  *   secret = HMAC_SHA256(key="WebAppData", message=bot_token)
  *   check  = HMAC_SHA256(key=secret,       message=data_check_string)
- * data_check_string = all fields except `hash` and `signature`, sorted by key,
- * joined as "key=value" with \n.
+ * data_check_string = all received fields except `hash`, sorted by key, joined as
+ * "key=value" with \n, using URL-DECODED values.
+ *
+ * `signature` IS part of the hash, despite Telegram's own documentation showing an
+ * example string of only auth_date, query_id and user. Established by probing four
+ * candidate constructions against real initData from Telegram Desktop 9.6 — see
+ * `diagInitData` below, which still does that and reports which one matches.
  *
  * The URL of this Web App is public — it is in a public repository on purpose.
  * Without a valid hash produced by our bot token, every request stops here.
@@ -466,9 +471,8 @@ function verifyInitData(initData) {
   var hash = data.hash;
   if (!hash) return { ok: false, code: 'BAD_INIT_DATA' };
 
-  var keys = Object.keys(data).filter(function (k) {
-    return k !== 'hash' && k !== 'signature';
-  }).sort();
+  // Only `hash` is excluded. `signature`, when present, participates in the hash.
+  var keys = Object.keys(data).filter(function (k) { return k !== 'hash'; }).sort();
   var checkString = keys.map(function (k) { return k + '=' + data[k]; }).join('\n');
 
   var secret = hmacBytes_(Utilities.newBlob('WebAppData').getBytes(), cfg_('BOT_TOKEN'));

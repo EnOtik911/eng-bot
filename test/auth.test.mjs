@@ -44,6 +44,14 @@ new Function('Utilities', 'PropertiesService', 'cfg_', 'cfgAllowlist_', 'exports
 const { verifyInitData, constantTimeEquals_ } = scope;
 
 // --- independent reference signer (not the code under test) ------------------
+/**
+ * Reference signer. Signs over every field except `hash`, including `signature`.
+ *
+ * The previous version of this file excluded `signature` on both sides — it signed
+ * with the same rule it verified, so it could only ever confirm the assumption it was
+ * built on. Reality disagreed: probing four constructions against real initData from
+ * Telegram Desktop 9.6 showed `signature` is inside the hash.
+ */
 function signInitData(fields, token) {
   const keys = Object.keys(fields).sort();
   const checkString = keys.map(k => `${k}=${fields[k]}`).join('\n');
@@ -108,15 +116,34 @@ check('a valid signature from a user outside the allowlist is rejected', () => {
   assert(res.ok === false && res.code === 'NOT_ALLOWED', JSON.stringify(res));
 });
 
-check('the signature field is excluded from the check string', () => {
-  // Telegram may add `signature`; including it would break every real payload.
+check('a payload carrying signature validates when signature is inside the hash', () => {
+  // The real shape from Telegram Desktop: auth_date, query_id, signature, user, hash.
+  const res = verifyInitData(makeInitData({
+    signature: 'Zm9vYmFyX3NpZ25hdHVyZV9iYXNlNjR1cmw'
+  }));
+  assert(res.ok === true, 'must accept: ' + JSON.stringify(res));
+});
+
+check('a signature added after signing is rejected', () => {
+  // This is the assertion that would have caught the original defect. If `signature`
+  // were outside the hash, appending it could not change the outcome — it does.
   const fields = {
     auth_date: String(Math.floor(Date.now() / 1000)),
+    query_id: 'AAHtest',
     user: JSON.stringify({ id: Number(ALLOWED_ID) })
   };
-  const signed = signInitData(fields, BOT_TOKEN) + '&signature=whatever';
+  const signed = signInitData(fields, BOT_TOKEN) + '&signature=appended_after_signing';
   const res = verifyInitData(signed);
-  assert(res.ok === true, 'extra signature field must not break validation: ' + JSON.stringify(res));
+  assert(res.ok === false && res.code === 'BAD_INIT_DATA',
+    'signature participates in the hash, so appending one must invalidate it: ' +
+    JSON.stringify(res));
+});
+
+check('tampering with signature alone invalidates the payload', () => {
+  const good = makeInitData({ signature: 'AAAA_original_signature' });
+  const tampered = good.replace('AAAA_original_signature', 'BBBB_tampered_signature');
+  assert(verifyInitData(good).ok === true, 'baseline must pass');
+  assert(verifyInitData(tampered).ok === false, 'tampered signature must fail');
 });
 
 check('missing, empty and malformed input never throws', () => {
