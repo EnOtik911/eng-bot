@@ -17,4 +17,5 @@ node_modules/
 .DS_Store
 .lavish/
 .playwright-mcp/
+.claude/
 app/config.local.js
