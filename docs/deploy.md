@@ -386,8 +386,17 @@ WEB_APP_URL: 'https://script.google.com/macros/s/AKfy.../exec',
 ## Шаг 7. Mini App в боте
 
 BotFather → `/mybots` → выбери бота → **Bot Settings** → **Menu Button** →
-**Configure menu button** → пришли URL из шага 6 → пришли подпись кнопки,
-например `Тренажёр`.
+**Configure menu button**.
+
+Дальше BotFather задаёт **два вопроса подряд**, и второй легко принять за ошибку:
+
+1. *«Send me the URL that will be opened by tapping the menu button»* — пришли
+   адрес Pages из шага 6, целиком, вместе с `/app/` на конце.
+2. *«Send me the title to be displayed on the button instead of Menu»* — пришли
+   **одно короткое слово**, например `Тренажёр`. Это просто подпись кнопки внизу
+   чата вместо слова «Menu», ничего технического. До 16 символов.
+
+После второго ответа придёт `Success!`.
 
 **Куда:** добавь этот же URL в Script Properties как `MINI_APP_URL` — без него
 ежедневный пинг не сможет прикрепить кнопку запуска.
