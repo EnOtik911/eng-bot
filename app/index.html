@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eng_bot</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <span id="counter" class="counter"></span>
+  <span id="pending" class="pending"></span>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<main class="stage">
+
+  <section id="screen-loading">
+    <p class="muted center">Загружаю очередь…</p>
+  </section>
+
+  <section id="screen-card" hidden>
+    <div class="meta">
+      <span id="direction" class="tag tag-accent"></span>
+      <span id="type" class="tag"></span>
+      <span id="layer" class="tag"></span>
+    </div>
+
+    <p id="prompt" class="prompt"></p>
+
+    <input id="typebox" class="typebox" type="text" autocomplete="off"
+           autocapitalize="none" spellcheck="false" hidden>
+    <p id="typehint" class="hint" hidden>Набери по-английски и нажми «Показать»</p>
+
+    <div id="answer-block" hidden>
+      <p id="answer" class="answer"></p>
+      <p id="example" class="example"></p>
+      <p id="example-ru" class="example example-ru"></p>
+    </div>
+
+    <button id="reveal" class="btn btn-wide">Показать</button>
+
+    <div id="ratings" class="ratings" hidden>
+      <button class="btn rate rate-again" data-rating="1">Не помню<span class="key">1</span></button>
+      <button class="btn rate rate-hard"  data-rating="2">С трудом<span class="key">2</span></button>
+      <button class="btn rate rate-good"  data-rating="3">Помню<span class="key">3</span></button>
+      <button class="btn rate rate-easy"  data-rating="4">Легко<span class="key">4</span></button>
+    </div>
+  </section>
+
+  <section id="screen-empty" hidden class="center">
+    <h1>На сегодня всё</h1>
+    <p class="muted">Очередь пуста. Возвращайся завтра или добавь новый батч в inbox.</p>
+  </section>
+
+  <section id="screen-done" hidden class="center">
+    <h1>Сессия закрыта</h1>
+    <p id="done-body" class="muted"></p>
+    <p id="flush-status" class="hint"></p>
+    <button id="again-session" class="btn btn-wide">Ещё раз</button>
+  </section>
+
+  <section id="screen-error" hidden class="center">
+    <h1>Не получилось</h1>
+    <p id="error-body" class="muted"></p>
+    <button id="retry" class="btn btn-wide">Повторить</button>
+  </section>
+
+</main>
+
+<script src="config.js"></script>
+<script src="i18n.js"></script>
+<script src="store.js"></script>
+<script src="api.js"></script>
+<script src="session.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

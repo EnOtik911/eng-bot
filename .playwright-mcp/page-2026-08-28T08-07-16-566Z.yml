@@ -1,0 +1,519 @@
+- main [ref=f6e2]:
+  - generic [ref=f6e3]:
+    - generic [ref=f6e4]:
+      - generic [ref=f6e5]: Phase 0
+      - generic [ref=f6e6]: Discovery
+      - generic [ref=f6e7]: Eng_bot
+    - heading "Десять вопросов до первой строки кода" [level=1] [ref=f6e8]
+    - paragraph [ref=f6e9]: "Раунд 1 закрыт, допущения подтверждены, R2 снят. Остался один настоящий вопрос — R3, про то, что именно мешает тебе прямо сейчас. От него зависит единица карточки: слово, коллокация или фраза целиком. Файлы по-прежнему не пишу."
+  - list [ref=f6e11]:
+    - listitem [ref=f6e12]: Discovery
+    - listitem [ref=f6e13]: Research · 3 трека
+    - listitem [ref=f6e14]: GATE 1 · findings
+    - listitem [ref=f6e15]: GATE 2 · спека
+    - listitem [ref=f6e16]: MVP
+  - generic [ref=f6e17]:
+    - generic [ref=f6e18]:
+      - heading "Раунд 1 принят" [level=2] [ref=f6e19]
+      - generic [ref=f6e20]: 10 из 10
+    - generic [ref=f6e22]:
+      - generic [ref=f6e23]:
+        - generic [ref=f6e24]:
+          - term [ref=f6e25]: Backend-аккаунт
+          - definition [ref=f6e26]: Личный @gmail — Apps Script деплоится без ограничений админа
+        - generic [ref=f6e27]:
+          - term [ref=f6e28]: Репозиторий
+          - definition [ref=f6e29]: Публичный → GitHub Pages бесплатно, секреты в Script Properties
+        - generic [ref=f6e30]:
+          - term [ref=f6e31]: Telegram
+          - definition [ref=f6e32]: Новый бот · iOS + macOS + Windows 11
+        - generic [ref=f6e33]:
+          - term [ref=f6e34]: Бюджет
+          - definition [ref=f6e35]: 10–20 мин/день, дробно во всех четырёх контекстах
+        - generic [ref=f6e36]:
+          - term [ref=f6e37]: База слов
+          - definition [ref=f6e38]: С нуля, наполнение через ИИ → импорт как постоянный рабочий цикл
+        - generic [ref=f6e39]:
+          - term [ref=f6e40]: Горизонт
+          - definition [ref=f6e41]: 6–12 мес — ориентир, жёсткой точки нет
+        - generic [ref=f6e42]:
+          - term [ref=f6e43]: Timezone
+          - definition [ref=f6e44]: Москва, UTC+3
+        - generic [ref=f6e45]:
+          - term [ref=f6e46]: Процесс
+          - definition [ref=f6e47]: Один поток, без субагентов — конфликт правил снят
+      - alert [ref=f6e48]:
+        - generic [ref=f6e49]: "Главное из раунда 1, что переопределяет продукт: ты бросил Anki не из-за долга ревью, а потому что «слова не всплывали в речи» и не было контроля над базой. Это разворачивает Track A: изолированные слова почти наверняка не подходят как единица карточки. Это же и есть требование к системе — база должна быть твоей и управляемой, а не чёрным ящиком."
+  - generic [ref=f6e51]:
+    - generic [ref=f6e52]:
+      - heading "Раунд 2" [level=2] [ref=f6e53]
+      - generic [ref=f6e54]: открыт 1 вопрос
+      - generic [ref=f6e55]: 1 снят
+    - paragraph [ref=f6e56]: R2 закрыт — недоразумение было в моей разметке. Остались один настоящий вопрос (R3) и одно уточнение (R1). R3 — единственное, что реально блокирует выбор единицы карточки.
+    - generic [ref=f6e57]:
+      - article [ref=f6e58]:
+        - generic [ref=f6e59]:
+          - generic [ref=f6e60]:
+            - heading "R1 Насколько жив навык радиообмена" [level=3] [ref=f6e61]:
+              - generic [ref=f6e62]: R1
+              - text: Насколько жив навык радиообмена
+            - generic [ref=f6e63]: уточнение
+          - paragraph [ref=f6e64]: "Уровень A2 / B1 подтверждён — вопрос не в нём. Меня интересует другое: несколько тысяч часов радиообмена на VATSIM и IVAO дали тебе то, чего у большинства A2 нет — восприятие английской речи под нагрузкой, через шум, в реальном времени, без права на паузу. Это отдельный актив, и на него можно опереться вместо того, чтобы строить восприятие с нуля."
+          - paragraph [ref=f6e65]: "Но актив работает только если он свежий. Если ты не летал пять лет — это воспоминание, а не навык, и опираться на него нельзя. Ответ влияет на одну вещь: закладывать ли в план аудирование живой речи как отдельный трек или сначала вытаскивать лексику, а восприятие подтянется само."
+          - generic [ref=f6e66]:
+            - group "Что ближе к правде про радиообмен" [ref=f6e67]:
+              - generic [ref=f6e69] [cursor=pointer]:
+                - radio "Радиообмен шёл свободно, но за его пределами почти ничего" [ref=f6e70]
+                - generic [ref=f6e71]: Радиообмен шёл свободно, но за его пределами почти ничего
+              - generic [ref=f6e72] [cursor=pointer]:
+                - radio "Радиообмен свободно, бытовой разговор с трудом — но идёт" [ref=f6e73]
+                - generic [ref=f6e74]: Радиообмен свободно, бытовой разговор с трудом — но идёт
+              - generic [ref=f6e75] [cursor=pointer]:
+                - radio "Свободно и по радио, и в бытовом — не хватает только рабочей и деловой лексики" [ref=f6e76]
+                - generic [ref=f6e77]: Свободно и по радио, и в бытовом — не хватает только рабочей и деловой лексики
+              - generic [ref=f6e78] [cursor=pointer]:
+                - radio "Радиообмен был чисто по шаблонам — свободой это назвать нельзя" [ref=f6e79]
+                - generic [ref=f6e80]: Радиообмен был чисто по шаблонам — свободой это назвать нельзя
+              - textbox "Если проходил тест (EF SET, CEFR, IELTS) — какой результат" [ref=f6e81]
+              - textbox "Когда последний раз летал в сети — навык свежий или лет пять назад" [ref=f6e82]
+            - button "В очередь" [ref=f6e83] [cursor=pointer]
+      - article [ref=f6e84]:
+        - generic [ref=f6e85]:
+          - generic [ref=f6e86]:
+            - heading "R2 Допущения — снято" [level=3] [ref=f6e87]:
+              - generic [ref=f6e88]: R2
+              - text: Допущения — снято
+            - generic [ref=f6e89]: решено
+          - paragraph [ref=f6e90]: "Ты читал колонку наоборот: галочка означала «согласен», а подписана она была «Неверно». Это мой косяк в разметке, не твоя ошибка — колонку с инвертированным смыслом я поставил сам. Таблица ниже переписана, все пять допущений помечены как подтверждённые."
+          - paragraph [ref=f6e91]: "И противоречия с VATSIM тут нет: радиотелефония — жёсткая фразеология, там нет ни выбора слов, ни свободного синтаксиса. Сильное восприятие речи под нагрузкой при A2 в свободной продукции — это внутренне непротиворечивая картина, и она совпадает с твоей же формулировкой «навык есть, его нужно вывести из спящего режима». Уровень A2 / B1 принят как рабочая гипотеза."
+      - article [ref=f6e92]:
+        - generic [ref=f6e93]:
+          - generic [ref=f6e94]:
+            - heading "R3 Что мешает прямо сейчас" [level=3] [ref=f6e95]:
+              - generic [ref=f6e96]: R3
+              - text: Что мешает прямо сейчас
+            - generic [ref=f6e97]: ждёт ответа
+          - paragraph [ref=f6e98]: "«Слова не всплывали в речи» — это симптом, и у него минимум четыре разные причины, которые лечатся разными типами карточек. Отметь всё, что узнаёшь. Это прямой вход в решение о единице карточки: слово, коллокация или фраза целиком."
+          - generic [ref=f6e99]:
+            - group [ref=f6e100]:
+              - generic [ref=f6e101] [cursor=pointer]:
+                - checkbox "Лексики просто мало — знаю мало слов" [ref=f6e102]
+                - generic [ref=f6e103]: Лексики просто мало — знаю мало слов
+              - generic [ref=f6e104] [cursor=pointer]:
+                - checkbox "Не успеваю разбирать быструю живую речь вне шаблонов" [ref=f6e105]
+                - generic [ref=f6e106]: Не успеваю разбирать быструю живую речь вне шаблонов
+              - generic [ref=f6e107] [cursor=pointer]:
+                - checkbox "Не могу собрать фразу на ходу — думаю по-русски и перевожу" [ref=f6e108]
+                - generic [ref=f6e109]: Не могу собрать фразу на ходу — думаю по-русски и перевожу
+              - generic [ref=f6e110] [cursor=pointer]:
+                - checkbox "Слова узнаю в тексте, но они не приходят в момент речи" [ref=f6e111]
+                - generic [ref=f6e112]: Слова узнаю в тексте, но они не приходят в момент речи
+              - generic [ref=f6e113] [cursor=pointer]:
+                - checkbox "В спеках и тикетах спотыкаюсь на терминах и оборотах" [ref=f6e114]
+                - generic [ref=f6e115]: В спеках и тикетах спотыкаюсь на терминах и оборотах
+              - generic [ref=f6e116] [cursor=pointer]:
+                - checkbox "Ступор при живом человеке — не язык, а страх" [ref=f6e117]
+                - generic [ref=f6e118]: Ступор при живом человеке — не язык, а страх
+              - 'textbox "Своими словами: что было последний раз, когда не хватило английского" [ref=f6e119]'
+            - button "В очередь" [ref=f6e120] [cursor=pointer]
+  - generic [ref=f6e121]:
+    - generic [ref=f6e122]:
+      - heading "Решил сам" [level=2] [ref=f6e123]
+      - generic [ref=f6e124]: 3 решения
+    - paragraph [ref=f6e125]: Это не вопросы — это ответы. Возражай, если не согласен.
+    - generic [ref=f6e126]:
+      - table [ref=f6e128]:
+        - rowgroup [ref=f6e129]:
+          - row [ref=f6e130]:
+            - columnheader "Против" [ref=f6e131]
+            - columnheader "Вопрос" [ref=f6e132]
+            - columnheader "Решение и почему" [ref=f6e133]
+        - rowgroup [ref=f6e134]:
+          - row [ref=f6e135]:
+            - cell [ref=f6e136]:
+              - checkbox [ref=f6e137] [cursor=pointer]
+            - cell "Заработает ли миниапка на macOS и Windows" [ref=f6e138]
+            - 'cell "Да. Telegram Desktop на macOS и Windows открывает Mini Apps — одна кодовая база на все три платформы. Но это не «бонус», а требование: появляется физическая клавиатура, значит production-карточки с текстовым вводом дешевеют, а адаптивная вёрстка становится обязательной, а не опцией." [ref=f6e139]'
+          - row [ref=f6e140]:
+            - cell [ref=f6e141]:
+              - checkbox [ref=f6e142] [cursor=pointer]
+            - cell "Пинги по дням в календарном виде" [ref=f6e143]
+            - 'cell "Вне MVP. В MVP — один ежедневный триггер, время лежит в настройках и меняется. Расписание по дням недели с календарным UI — следующая фаза. Причина прямая: это ровно тот тип фичи, на котором проект превращается в три месяца стройки и ноль выученных слов." [ref=f6e144]'
+          - row [ref=f6e145]:
+            - cell [ref=f6e146]:
+              - checkbox [ref=f6e147] [cursor=pointer]
+            - cell "Авторизация через user_id" [ref=f6e148]
+            - 'cell "Это твоё же жёсткое ограничение из брифа: «single-user, никакой авторизации кроме проверки, что это он». Не моё допущение — отменить его я не могу. Если ты имел в виду что-то другое, напиши, что именно." [ref=f6e149]'
+      - textbox "Возражение или уточнение" [ref=f6e150]
+      - button "В очередь" [ref=f6e151] [cursor=pointer]
+  - generic [ref=f6e153]:
+    - heading "Почему это блокеры, а не анкета" [level=2] [ref=f6e154]
+    - paragraph [ref=f6e155]: Каждый вопрос слева — точка ветвления в стеке. Справа — что придётся переделывать, если я угадаю неверно и начну строить.
+    - figure [ref=f6e156]:
+      - generic [ref=f6e157]:
+        - img "Пять вопросов и что от них ветвится в архитектуре Слева вопрос, в центре компонент системы, который от него зависит, справа цена неверной догадки." [ref=f6e159]:
+          - generic [ref=f6e160]:
+            - generic [ref=f6e161]: ВОПРОС
+            - generic [ref=f6e162]: ЧТО ОТ НЕГО ЗАВИСИТ
+            - generic [ref=f6e163]: ЦЕНА НЕВЕРНОЙ ДОГАДКИ
+          - generic "Q1 — тип Google-аккаунта определяет, можно ли вообще задеплоить Apps Script Web App" [ref=f6e164]:
+            - generic [ref=f6e166]: Q1 · Google-аккаунт
+            - generic [ref=f6e167]: личный или корпоративный
+            - generic [ref=f6e169]: "Backend: возможен ли деплой вообще"
+            - generic [ref=f6e170]: весь backend заново
+          - generic "Q2 — приватность репозитория определяет платформу хостинга фронтенда" [ref=f6e171]:
+            - generic [ref=f6e173]: Q2 · Приватность репо
+            - generic [ref=f6e174]: публичный или закрытый
+            - generic [ref=f6e176]: Хостинг фронтенда + секреты
+            - generic [ref=f6e177]: смена платформы
+          - generic "Q3 — бот и платформа определяют webhook и поведение UI в Mini App" [ref=f6e178]:
+            - generic [ref=f6e180]: Q3 · Бот и платформа
+            - generic [ref=f6e181]: новый бот · iOS или Android
+            - generic [ref=f6e183]: Webhook и вёрстка Mini App
+            - generic [ref=f6e184]: баги safe-area, Back
+          - generic "Q4 — прошлый опыт SRS определяет выбор алгоритма и дефолтов" [ref=f6e185]:
+            - generic [ref=f6e187]: Q4 · Прошлый опыт SRS
+            - generic [ref=f6e188]: на чём именно бросил
+            - generic [ref=f6e190]: Алгоритм повторений и дефолты
+            - generic [ref=f6e191]: ещё один брошенный трекер
+          - generic "Q5 — бюджет времени определяет дефолт новых слов в день и всю кривую долга ревью" [ref=f6e192]:
+            - generic [ref=f6e194]: Q5 · Бюджет времени
+            - generic [ref=f6e195]: минут в день и контекст
+            - generic [ref=f6e197]: Новых слов в день · объём сессии
+            - generic [ref=f6e198]: долг ревью → отказ
+        - generic [ref=f6e199]:
+          - text: "Синие ветвления — техника, их можно переделать за вечер. Жёлтые — продуктовые: ошибка в них не ломает код, она приводит к тому, что система работает, а ты ей не пользуешься."
+          - generic [ref=f6e200]: Схема шире экрана — листается вбок.
+  - generic [ref=f6e202]:
+    - generic [ref=f6e203]:
+      - heading "Блокеры" [level=2] [ref=f6e204]
+      - generic [ref=f6e205]: 5 вопросов
+    - paragraph [ref=f6e206]: Отвечай прямо в карточках — каждая кнопка «В очередь» ставит один ответ. Внизу страницы одна кнопка отправляет всё сразу.
+    - generic [ref=f6e207]:
+      - article [ref=f6e208]:
+        - generic [ref=f6e209]:
+          - generic [ref=f6e210]:
+            - heading "01 Google-аккаунт" [level=3] [ref=f6e211]:
+              - generic [ref=f6e212]: "01"
+              - text: Google-аккаунт
+            - generic [ref=f6e213]: принято
+          - paragraph [ref=f6e214]: В корпоративном Workspace админ часто запрещает деплой Apps Script Web App с доступом Anyone — а это ровно то, что нужно и для Telegram-webhook, и для запросов из Mini App. Если аккаунт корпоративный, всё придётся вешать на личный.
+          - generic [ref=f6e215]:
+            - group "На каком аккаунте будут жить скрипт и Sheets?" [ref=f6e216]:
+              - generic [ref=f6e218] [cursor=pointer]:
+                - radio "Личный @gmail" [ref=f6e219]
+                - generic [ref=f6e220]: Личный @gmail
+              - generic [ref=f6e221] [cursor=pointer]:
+                - radio "Корпоративный Workspace (JET / Libra)" [ref=f6e222]
+                - generic [ref=f6e223]: Корпоративный Workspace (JET / Libra)
+              - generic [ref=f6e224] [cursor=pointer]:
+                - radio "Есть оба — готов использовать личный" [ref=f6e225]
+                - generic [ref=f6e226]: Есть оба — готов использовать личный
+              - generic [ref=f6e227] [cursor=pointer]:
+                - radio "Не знаю, есть ли ограничения админа" [ref=f6e228]
+                - generic [ref=f6e229]: Не знаю, есть ли ограничения админа
+              - textbox "Уточнение (необязательно)" [ref=f6e230]
+            - button "В очередь" [ref=f6e231] [cursor=pointer]
+      - article [ref=f6e232]:
+        - generic [ref=f6e233]:
+          - generic [ref=f6e234]:
+            - heading "02 GitHub и приватность репо" [level=3] [ref=f6e235]:
+              - generic [ref=f6e236]: "02"
+              - text: GitHub и приватность репо
+            - generic [ref=f6e237]: принято
+          - paragraph [ref=f6e238]: "Бесплатный GitHub Pages работает только с публичного репозитория. Публичный репо для портфолио + секреты (bot token, Sheet ID, твой chat_id) — решаемо: код публичный, секреты в Script Properties. Но если репо должен быть приватным, хостинг фронта другой (Cloudflare Pages / Netlify), и это меняет deploy-путь."
+          - generic [ref=f6e239]:
+            - group "Каким должен быть репозиторий?" [ref=f6e240]:
+              - generic [ref=f6e242] [cursor=pointer]:
+                - radio "Аккаунт есть, публичный репо ок — это же портфолио" [ref=f6e243]
+                - generic [ref=f6e244]: Аккаунт есть, публичный репо ок — это же портфолио
+              - generic [ref=f6e245] [cursor=pointer]:
+                - radio "Аккаунт есть, но репо нужен приватный" [ref=f6e246]
+                - generic [ref=f6e247]: Аккаунт есть, но репо нужен приватный
+              - generic [ref=f6e248] [cursor=pointer]:
+                - radio "Аккаунта нет или не помню доступы" [ref=f6e249]
+                - generic [ref=f6e250]: Аккаунта нет или не помню доступы
+              - generic [ref=f6e251] [cursor=pointer]:
+                - radio "Решай сам — мне без разницы" [ref=f6e252]
+                - generic [ref=f6e253]: Решай сам — мне без разницы
+            - button "В очередь" [ref=f6e254] [cursor=pointer]
+      - article [ref=f6e255]:
+        - generic [ref=f6e256]:
+          - generic [ref=f6e257]:
+            - 'heading "03 Telegram: бот и платформа" [level=3] [ref=f6e258]':
+              - generic [ref=f6e259]: "03"
+              - text: "Telegram: бот и платформа"
+            - generic [ref=f6e260]: принято
+          - paragraph [ref=f6e261]: "Один бот = один webhook-URL; смешивать промо-бота JET и учебный нельзя. Платформа важна не косметически: у Mini App на iOS другое поведение viewport, safe-area и кнопки Back — это реальные баги, которые дешевле предусмотреть, чем ловить."
+          - generic [ref=f6e262]:
+            - generic [ref=f6e263]:
+              - group "Бот" [ref=f6e264]:
+                - generic [ref=f6e266] [cursor=pointer]:
+                  - radio "Новый под проект" [ref=f6e267]
+                  - generic [ref=f6e268]: Новый под проект
+                - generic [ref=f6e269] [cursor=pointer]:
+                  - radio "Переиспользовать" [ref=f6e270]
+                  - generic [ref=f6e271]: Переиспользовать
+                - generic [ref=f6e272] [cursor=pointer]:
+                  - radio "Создам с нуля" [ref=f6e273]
+                  - generic [ref=f6e274]: Создам с нуля
+              - group "Телефон" [ref=f6e275]:
+                - generic [ref=f6e277] [cursor=pointer]:
+                  - radio "iOS" [ref=f6e278]
+                  - generic [ref=f6e279]: iOS
+                - generic [ref=f6e280] [cursor=pointer]:
+                  - radio "Android" [ref=f6e281]
+                  - generic [ref=f6e282]: Android
+                - generic [ref=f6e283] [cursor=pointer]:
+                  - radio "Оба" [ref=f6e284]
+                  - generic [ref=f6e285]: Оба
+            - button "В очередь" [ref=f6e286] [cursor=pointer]
+      - article [ref=f6e287]:
+        - generic [ref=f6e288]:
+          - generic [ref=f6e289]:
+            - heading "04 Прошлый опыт SRS" [level=3] [ref=f6e290]:
+              - generic [ref=f6e291]: "04"
+              - text: Прошлый опыт SRS
+            - generic [ref=f6e292]: принято
+          - paragraph [ref=f6e293]: "Самый важный продуктовый вопрос на странице. Бросил из-за накопившегося долга ревью — выбор алгоритма и дефолтов будет один. Из-за неудобства или скуки интерфейса — другой. Не пробовал вообще — третий: тогда защиту от долга закладываем превентивно, не дожидаясь, пока он тебя догонит."
+          - generic [ref=f6e294]:
+            - group "Что пробовал" [ref=f6e295]:
+              - generic [ref=f6e297]:
+                - generic [ref=f6e298] [cursor=pointer]:
+                  - checkbox "Anki" [ref=f6e299]
+                  - generic [ref=f6e300]: Anki
+                - generic [ref=f6e301] [cursor=pointer]:
+                  - checkbox "Quizlet" [ref=f6e302]
+                  - generic [ref=f6e303]: Quizlet
+                - generic [ref=f6e304] [cursor=pointer]:
+                  - checkbox "Duolingo" [ref=f6e305]
+                  - generic [ref=f6e306]: Duolingo
+                - generic [ref=f6e307] [cursor=pointer]:
+                  - checkbox "Бумага" [ref=f6e308]
+                  - generic [ref=f6e309]: Бумага
+                - generic [ref=f6e310] [cursor=pointer]:
+                  - checkbox "Ничего" [ref=f6e311]
+                  - generic [ref=f6e312]: Ничего
+            - group "На чём именно бросил" [ref=f6e313]:
+              - generic [ref=f6e315] [cursor=pointer]:
+                - radio "Накопился долг ревью — открыл, увидел 300 карточек, закрыл" [ref=f6e316]
+                - generic [ref=f6e317]: Накопился долг ревью — открыл, увидел 300 карточек, закрыл
+              - generic [ref=f6e318] [cursor=pointer]:
+                - radio "Скучно и бессмысленно — слова не всплывали в речи" [ref=f6e319]
+                - generic [ref=f6e320]: Скучно и бессмысленно — слова не всплывали в речи
+              - generic [ref=f6e321] [cursor=pointer]:
+                - 'radio "Трение: неудобный ввод, долгая загрузка, много тапов" [ref=f6e322]'
+                - generic [ref=f6e323]: "Трение: неудобный ввод, долгая загрузка, много тапов"
+              - generic [ref=f6e324] [cursor=pointer]:
+                - radio "Лень наполнять — пустая база так и осталась пустой" [ref=f6e325]
+                - generic [ref=f6e326]: Лень наполнять — пустая база так и осталась пустой
+              - generic [ref=f6e327] [cursor=pointer]:
+                - radio "Не бросал — просто никогда не начинал" [ref=f6e328]
+                - generic [ref=f6e329]: Не бросал — просто никогда не начинал
+            - 'textbox "Что помнишь конкретно: сколько продержался, что раздражало" [ref=f6e330]'
+            - button "В очередь" [ref=f6e331] [cursor=pointer]
+      - article [ref=f6e332]:
+        - generic [ref=f6e333]:
+          - generic [ref=f6e334]:
+            - heading "05 Бюджет времени" [level=3] [ref=f6e335]:
+              - generic [ref=f6e336]: "05"
+              - text: Бюджет времени
+            - generic [ref=f6e337]: принято
+          - paragraph [ref=f6e338]: "От этой цифры зависит дефолт «новых слов в день», а от него — вся кривая долга ревью. Её нельзя взять из литературы, только из твоего бюджета. И контекст не менее важен: сессия на 3 минуты стоя в метро и сессия на 20 минут за столом — это разные интерфейсы, а не один и тот же с разным счётчиком."
+          - generic [ref=f6e339]:
+            - generic [ref=f6e340]:
+              - group "Минут в день — реально, не в идеале" [ref=f6e341]:
+                - generic [ref=f6e343] [cursor=pointer]:
+                  - radio "5–10" [ref=f6e344]
+                  - generic [ref=f6e345]: 5–10
+                - generic [ref=f6e346] [cursor=pointer]:
+                  - radio "10–20" [ref=f6e347]
+                  - generic [ref=f6e348]: 10–20
+                - generic [ref=f6e349] [cursor=pointer]:
+                  - radio "20–30" [ref=f6e350]
+                  - generic [ref=f6e351]: 20–30
+                - generic [ref=f6e352] [cursor=pointer]:
+                  - radio "30+" [ref=f6e353]
+                  - generic [ref=f6e354]: 30+
+              - group "Когда и где" [ref=f6e355]:
+                - generic [ref=f6e357]:
+                  - generic [ref=f6e358] [cursor=pointer]:
+                    - checkbox "Утро дома" [ref=f6e359]
+                    - generic [ref=f6e360]: Утро дома
+                  - generic [ref=f6e361] [cursor=pointer]:
+                    - checkbox "Дорога" [ref=f6e362]
+                    - generic [ref=f6e363]: Дорога
+                  - generic [ref=f6e364] [cursor=pointer]:
+                    - checkbox "Паузы в работе" [ref=f6e365]
+                    - generic [ref=f6e366]: Паузы в работе
+                  - generic [ref=f6e367] [cursor=pointer]:
+                    - checkbox "Вечер за столом" [ref=f6e368]
+                    - generic [ref=f6e369]: Вечер за столом
+            - paragraph [ref=f6e370]: "Честный ответ полезнее оптимистичного: на оптимистичном я построю дефолт, который сломается на второй неделе."
+            - button "В очередь" [ref=f6e371] [cursor=pointer]
+  - generic [ref=f6e373]:
+    - generic [ref=f6e374]:
+      - heading "Контент и последовательность" [level=2] [ref=f6e375]
+      - generic [ref=f6e376]: 4 вопроса
+    - paragraph [ref=f6e377]: Эти не блокируют код — они определяют, чему ты будешь учиться первым и в каком порядке.
+    - generic [ref=f6e378]:
+      - article [ref=f6e379]:
+        - generic [ref=f6e380]:
+          - generic [ref=f6e381]:
+            - heading "06 Уже накопленные слова" [level=3] [ref=f6e382]:
+              - generic [ref=f6e383]: "06"
+              - text: Уже накопленные слова
+            - generic [ref=f6e384]: принято
+          - paragraph [ref=f6e385]: Заметки, Sheets, скриншоты, закладки. Если запас есть — импорт первого батча входит в MVP, а не в «потом», и это меняет порядок сборки.
+          - generic [ref=f6e386]:
+            - group [ref=f6e387]:
+              - generic [ref=f6e388] [cursor=pointer]:
+                - radio "Ничего нет" [ref=f6e389]
+                - generic [ref=f6e390]: Ничего нет
+              - generic [ref=f6e391] [cursor=pointer]:
+                - radio "Есть, до 100" [ref=f6e392]
+                - generic [ref=f6e393]: Есть, до 100
+              - generic [ref=f6e394] [cursor=pointer]:
+                - radio "Есть, 100–500" [ref=f6e395]
+                - generic [ref=f6e396]: Есть, 100–500
+              - generic [ref=f6e397] [cursor=pointer]:
+                - radio "Есть, 500+" [ref=f6e398]
+                - generic [ref=f6e399]: Есть, 500+
+              - textbox "Где лежит и в каком виде" [ref=f6e400]
+            - button "В очередь" [ref=f6e401] [cursor=pointer]
+      - article [ref=f6e402]:
+        - generic [ref=f6e403]:
+          - generic [ref=f6e404]:
+            - heading "07 Живая практика речи" [level=3] [ref=f6e405]:
+              - generic [ref=f6e406]: "07"
+              - text: Живая практика речи
+            - generic [ref=f6e407]: принято
+          - paragraph [ref=f6e408]: От этого зависит, нужны ли production-карточки (RU→EN) с первого дня или это вторая фаза. Без выхода в речь производство учится в пустоту.
+          - generic [ref=f6e409]:
+            - group [ref=f6e410]:
+              - generic [ref=f6e411] [cursor=pointer]:
+                - radio "Нет никакой" [ref=f6e412]
+                - generic [ref=f6e413]: Нет никакой
+              - generic [ref=f6e414] [cursor=pointer]:
+                - radio "Тьютор регулярно" [ref=f6e415]
+                - generic [ref=f6e416]: Тьютор регулярно
+              - generic [ref=f6e417] [cursor=pointer]:
+                - radio "Рабочие созвоны" [ref=f6e418]
+                - generic [ref=f6e419]: Рабочие созвоны
+              - generic [ref=f6e420] [cursor=pointer]:
+                - radio "Только переписка" [ref=f6e421]
+                - generic [ref=f6e422]: Только переписка
+              - generic [ref=f6e423] [cursor=pointer]:
+                - radio "Планирую начать" [ref=f6e424]
+                - generic [ref=f6e425]: Планирую начать
+              - textbox "Частота, если есть" [ref=f6e426]
+            - button "В очередь" [ref=f6e427] [cursor=pointer]
+      - article [ref=f6e428]:
+        - generic [ref=f6e429]:
+          - generic [ref=f6e430]:
+            - heading "08 Дедлайн" [level=3] [ref=f6e431]:
+              - generic [ref=f6e432]: "08"
+              - text: Дедлайн
+            - generic [ref=f6e433]: принято
+          - paragraph [ref=f6e434]: "Влияет на агрессивность корпуса: general high-frequency core сначала — или сразу domain-термины под конкретные интервью."
+          - generic [ref=f6e435]:
+            - group [ref=f6e436]:
+              - generic [ref=f6e437] [cursor=pointer]:
+                - radio "Есть конкретная точка" [ref=f6e438]
+                - generic [ref=f6e439]: Есть конкретная точка
+              - generic [ref=f6e440] [cursor=pointer]:
+                - radio "6–12 мес — ориентир" [ref=f6e441]
+                - generic [ref=f6e442]: 6–12 мес — ориентир
+              - generic [ref=f6e443] [cursor=pointer]:
+                - radio "Без срока" [ref=f6e444]
+                - generic [ref=f6e445]: Без срока
+              - textbox "Что за точка и когда" [ref=f6e446]
+            - button "В очередь" [ref=f6e447] [cursor=pointer]
+      - article [ref=f6e448]:
+        - generic [ref=f6e449]:
+          - generic [ref=f6e450]:
+            - heading "09 Timezone и время пинга" [level=3] [ref=f6e451]:
+              - generic [ref=f6e452]: "09"
+              - text: Timezone и время пинга
+            - generic [ref=f6e453]: принято
+          - paragraph [ref=f6e454]: Нужно для time-driven триггеров Apps Script. Заодно скажи, нужен ли пинг вообще — или напоминание тебя раздражает и лучше без него.
+          - generic [ref=f6e455]:
+            - group [ref=f6e456]:
+              - textbox "Город или UTC-смещение (напр. Баку, UTC+4)" [ref=f6e457]
+              - textbox "Время пинга (напр. 08:30) или «без пинга»" [ref=f6e458]
+            - button "В очередь" [ref=f6e459] [cursor=pointer]
+  - generic [ref=f6e461]:
+    - heading "Процесс" [level=2] [ref=f6e462]
+    - paragraph [ref=f6e463]: Один вопрос про то, как мне вести Phase 1.
+    - article [ref=f6e464]:
+      - generic [ref=f6e465]:
+        - generic [ref=f6e466]:
+          - heading "10 Как запускать исследование" [level=3] [ref=f6e467]:
+            - generic [ref=f6e468]: "10"
+            - text: Как запускать исследование
+          - generic [ref=f6e469]: принято
+        - paragraph [ref=f6e470]: "Спрашиваю потому, что в этой сессии стоит явное ограничение: не вызывать субагентов без твоей просьбы. Твой глобальный CLAUDE.md при этом требует делегирования по умолчанию — это прямой конфликт, и решать его тебе."
+        - generic [ref=f6e471]:
+          - group [ref=f6e472]:
+            - generic [ref=f6e473] [cursor=pointer]:
+              - radio "Параллельно, три трека сразу Быстрее по времени, дороже по токенам, треки не мешают друг другу" [ref=f6e474]
+              - generic [ref=f6e475]:
+                - text: Параллельно, три трека сразу
+                - generic [ref=f6e476]: Быстрее по времени, дороже по токенам, треки не мешают друг другу
+            - generic [ref=f6e477] [cursor=pointer]:
+              - 'radio "Один поток, веду сам Дешевле, и я лучше держу связность: выбор алгоритма (Track A) напрямую влияет на объём записи в Sheets (Track B)" [ref=f6e478]'
+              - generic [ref=f6e479]:
+                - text: Один поток, веду сам
+                - generic [ref=f6e480]: "Дешевле, и я лучше держу связность: выбор алгоритма (Track A) напрямую влияет на объём записи в Sheets (Track B)"
+          - button "В очередь" [ref=f6e481] [cursor=pointer]
+  - generic [ref=f6e483]:
+    - generic [ref=f6e484]:
+      - heading "Допущения" [level=2] [ref=f6e485]
+      - generic [ref=f6e486]: все пять подтверждены
+    - paragraph [ref=f6e487]: "Первая версия этой таблицы имела колонку «Неверно» с галочками — смысл был инвертирован, и прочитать её как «отметь то, с чем согласен» было совершенно естественно. Переписал: теперь состояние видно без галочек, а действие ровно одно и подписано явно."
+    - table [ref=f6e489]:
+      - rowgroup [ref=f6e490]:
+        - row [ref=f6e491]:
+          - columnheader "Статус" [ref=f6e492]
+          - columnheader "Допущение" [ref=f6e493]
+      - rowgroup [ref=f6e494]:
+        - row [ref=f6e495]:
+          - cell "принято" [ref=f6e496]
+          - 'cell "Уровень: ~A2 в продукции, ~B1 в чтении технических текстов Влияет на выбор корпуса" [ref=f6e498]':
+            - text: "Уровень: ~A2 в продукции, ~B1 в чтении технических текстов"
+            - generic [ref=f6e499]: Влияет на выбор корпуса
+        - row [ref=f6e500]:
+          - cell "принято" [ref=f6e501]
+          - cell "«Проверить, что это он» = сверка user_id из Telegram с константой Влияет на весь слой auth" [ref=f6e503]:
+            - generic [ref=f6e504]: «Проверить, что это он» = сверка user_id из Telegram с константой
+            - generic [ref=f6e505]: Влияет на весь слой auth
+        - row [ref=f6e506]:
+          - cell "принято" [ref=f6e507]
+          - cell "Ввод латиницей на телефоне не проблема Влияет на формат production-карточки" [ref=f6e509]:
+            - text: Ввод латиницей на телефоне не проблема
+            - generic [ref=f6e510]: Влияет на формат production-карточки
+        - row [ref=f6e511]:
+          - cell "принято" [ref=f6e512]
+          - cell "Есть компьютер — генерация батчей и импорт происходят там Влияет на пайплайн импорта" [ref=f6e514]:
+            - text: Есть компьютер — генерация батчей и импорт происходят там
+            - generic [ref=f6e515]: Влияет на пайплайн импорта
+        - row [ref=f6e516]:
+          - cell "принято" [ref=f6e517]
+          - cell "Репозиторий Eng_bot — дом проекта Влияет на layout репозитория" [ref=f6e519]:
+            - generic [ref=f6e520]: Репозиторий Eng_bot — дом проекта
+            - generic [ref=f6e521]: Влияет на layout репозитория
+    - group [ref=f6e522]:
+      - generic "Если какое-то из них всё-таки неверно — открой и отмени" [ref=f6e523] [cursor=pointer]
+  - generic [ref=f6e525]:
+    - heading "Или просто напиши текстом" [level=2] [ref=f6e526]
+    - paragraph [ref=f6e527]: Если удобнее ответить сразу по номерам одним куском — вот поле. Карточки выше можно не трогать.
+    - generic [ref=f6e528]:
+      - textbox "1. личный gmail 2. публичный, это портфолио 3. новый бот, iOS 4. Anki, бросил на долге ревью через месяц 5. 15 минут, утро и дорога ..." [ref=f6e529]:
+        - /placeholder: "1. личный gmail\n2. публичный, это портфолио\n3. новый бот, iOS\n4. Anki, бросил на долге ревью через месяц\n5. 15 минут, утро и дорога\n..."
+      - button "В очередь" [ref=f6e530] [cursor=pointer]
+    - generic [ref=f6e532]:
+      - generic [ref=f6e533]:
+        - heading "Готово — отправляй" [level=3] [ref=f6e534]
+        - paragraph [ref=f6e535]: Поставленные в очередь ответы уйдут мне все сразу. Дальше — Phase 1 и три трека исследования, потом GATE 1. Файлы не пишу до твоего «ок».
+      - button "Отправить агенту" [ref=f6e536] [cursor=pointer]
+    - paragraph [ref=f6e537]: "Дизайн-источник: принципы из .context/DESIGN_TASTE.md этого проекта (тёмная база, один акцент, 8px-сетка, максимум два кегля-уровня на блок) — project-specific поля там пока TBD, поэтому реализация на рекомендованном Lavish-стеке Tailwind v4 + DaisyUI (тема night)."

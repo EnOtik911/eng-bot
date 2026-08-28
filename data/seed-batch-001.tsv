@@ -1,0 +1,21 @@
+type	en	ru	example_en	example_ru	layer	topic	note
+collocation	roll out a feature	выкатывать функциональность	We roll out the feature to ten percent of users first.	Сначала мы выкатываем функциональность на десять процентов пользователей.	business	release	
+collocation	push back on a deadline	оспаривать срок	I had to push back on the deadline because scope grew.	Мне пришлось оспорить срок, потому что объём вырос.	business	negotiation	
+collocation	take ownership of	брать ответственность за	She took ownership of the migration end to end.	Она взяла ответственность за миграцию от начала до конца.	business	ownership	
+collocation	align on scope	согласовать объём работ	Let us align on scope before we estimate.	Давайте согласуем объём работ до оценки.	business	planning	
+collocation	raise a concern	озвучить опасение	I want to raise a concern about the rollout plan.	Хочу озвучить опасение по плану выкатки.	business	meetings	
+phrase	let me walk you through it	давай я проведу тебя по этому	Let me walk you through it step by step.	Давай я проведу тебя по этому шаг за шагом.	business	meetings	
+phrase	correct me if I am wrong	поправь меня, если я не прав	Correct me if I am wrong, but the sync is nightly.	Поправь меня, если я не прав, но синхронизация ночная.	business	meetings	
+phrase	that is out of scope for now	сейчас это вне объёма работ	That is out of scope for now, let us park it.	Сейчас это вне объёма работ, давайте отложим.	business	meetings	
+collocation	fleet utilization	утилизация парка	Fleet utilization dropped after the price change.	Утилизация парка упала после изменения цены.	mobility	metrics	
+collocation	unit economics	юнит-экономика	The unit economics break even at four rides per day.	Юнит-экономика выходит в ноль на четырёх поездках в день.	mobility	metrics	
+collocation	idle vehicle	простаивающий транспорт	We rebalance idle vehicles every morning.	Мы перераспределяем простаивающий транспорт каждое утро.	mobility	ops	
+collocation	ride completion rate	доля завершённых поездок	Ride completion rate fell in the rainy week.	Доля завершённых поездок упала в дождливую неделю.	mobility	metrics	
+collocation	promo redemption	использование промокода	Promo redemption spiked on the first weekend.	Использование промокода подскочило в первые выходные.	mobility	growth	
+collocation	attribution window	окно атрибуции	We use a seven day attribution window.	Мы используем семидневное окно атрибуции.	mobility	growth	
+collocation	rate plan	тарифный план	The rate plan changes on weekends.	Тарифный план меняется на выходных.	hospitality	pms	
+collocation	guest folio	счёт гостя	Charges post to the guest folio automatically.	Начисления попадают на счёт гостя автоматически.	hospitality	pms	
+collocation	room inventory	номерной фонд	Room inventory syncs with the channel manager.	Номерной фонд синхронизируется с channel manager.	hospitality	pms	
+collocation	no-show policy	политика незаезда	The no-show policy charges the first night.	Политика незаезда списывает первую ночь.	hospitality	pms	
+collocation	gather requirements	собирать требования	I gather requirements from three stakeholder groups.	Я собираю требования у трёх групп стейкхолдеров.	business	analysis	
+collocation	edge case	краевой случай	This edge case breaks the nightly job.	Этот краевой случай ломает ночную задачу.	business	analysis	

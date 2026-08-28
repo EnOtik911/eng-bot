@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# All tests. No install step, no dependencies.
+set -u
+cd "$(dirname "$0")/.."
+fail=0
+
+echo "── syntax: every .gs and .js file parses"
+node -e '
+const fs=require("fs");let bad=0;
+const files=[...fs.readdirSync("gas").filter(f=>f.endsWith(".gs")).map(f=>"gas/"+f),
+             ...fs.readdirSync("app").filter(f=>f.endsWith(".js")).map(f=>"app/"+f)];
+for (const f of files){ try{ new Function(fs.readFileSync(f,"utf8")); }
+  catch(e){ bad++; console.log("  FAIL "+f+": "+e.message); } }
+console.log(bad? bad+" file(s) with syntax errors" : "  "+files.length+" files parse");
+process.exit(bad?1:0);' || fail=1
+echo
+
+for t in test/fsrs.test.mjs test/session.test.mjs test/auth.test.mjs test/import-format.test.mjs; do
+  echo "── $t"
+  node "$t" || fail=1
+  echo
+done
+if [ "$fail" -ne 0 ]; then echo "FAILED"; exit 1; fi
+echo "all suites green"
