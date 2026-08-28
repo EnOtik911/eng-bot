@@ -17,7 +17,7 @@ sequencing decision was taken on evidence rather than referred back.
 | 4 | `gas/GrammarImport.gs` validator + rollback | VERIFIED |
 | 5 | Corpus: 8 patterns x 12 items x 4 kinds = 96 | VERIFIED |
 | 6 | Client: `answer.js`, `grammar.js`, `grammar-ui.js`, home screen, picker | VERIFIED |
-| 7 | Tests: 4 new suites, 56 new assertions; red-then-green demonstrated | VERIFIED |
+| 7 | Tests: 5 new suites, 61 new assertions; red-then-green demonstrated for each | VERIFIED |
 | 8 | Docs: spec, grammar map, generation prompt, user guide, ADR-04 | VERIFIED |
 | 9 | Deploy | BLOCKED on owner |
 
@@ -46,7 +46,10 @@ sequencing decision was taken on evidence rather than referred back.
 
 ## Verification evidence (by reference)
 
-- full suite: `./test/run-all.sh` — 13 suites, 132 assertions, all green
+- full suite: `./test/run-all.sh` — 14 suites, 137 assertions, all green
+- `test/dom-ids.test.mjs` closes a gap no other suite covered: a typo in an element id
+  passes syntax checking and logic tests, then blanks the app silently at runtime. It
+  also caught one dangling i18n key (`theoryLink`) that was declared and never wired
 - red demonstration: pool cursor frozen -> 1 fail; retry overwrite -> 3 fails; hint cap
   removed -> 2 fails; corpus token mismatch -> 1 fail. All restored green afterwards.
 - corpus solvability: `test/grammar-import.test.mjs` runs every one of the 96 canonical

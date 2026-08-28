@@ -85,7 +85,6 @@ window.I18N = {
     correctAnswer: 'Правильно так:',
     retryLabel: 'Повтор — набери правильно',
     hintPenalty: 'С подсказкой раунд оценивается не выше «Помню»',
-    theoryLink: 'разобрать теорию',
 
     roundDone: 'Раунд закрыт',
     roundScore: function (ok, total) { return 'Верно с первого раза: ' + ok + ' из ' + total; },
