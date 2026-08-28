@@ -12,6 +12,10 @@ echo "── guide: app/guide.html is in sync with docs/guide.md"
 node test/build-guide.mjs --check || fail=1
 echo
 
+echo "── corpus: data/grammar-seed.tsv is in sync with gas/GrammarSeed.gs"
+node test/build-grammar-tsv.mjs --check || fail=1
+echo
+
 echo "── syntax: every .gs and .js file parses"
 node -e '
 const fs=require("fs");let bad=0;
