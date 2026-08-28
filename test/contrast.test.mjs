@@ -2,12 +2,15 @@
  * Контраст текста на стекле.
  *
  * Главный риск глассморфизма — не производительность, а читаемость: полупрозрачный
- * слой поверх произвольного фона роняет контраст ниже WCAG, и на светлом пятне
- * градиента текст пропадает. Здесь считается худший случай: самое светлое, что
- * может оказаться под стеклом.
+ * слой поверх произвольного фона роняет контраст, и на неудачном участке градиента
+ * текст пропадает.
  *
- * Пороги WCAG AA: 4.5:1 для обычного текста, 3:1 для крупного
- * (>=24px, либо >=18.66px полужирным).
+ * Проверка не привязана к теме. Для каждого цвета текста берутся ДВА крайних фона —
+ * самый светлый и самый тёмный, какие могут оказаться под стеклом, — и берётся
+ * худший из двух контрастов. Так тест остаётся верным и на светлой палитре, и на
+ * тёмной: на светлой опасен тёмный фон, на тёмной наоборот, и заранее знать не надо.
+ *
+ * Пороги WCAG AA: 4.5:1 обычный текст, 3:1 крупный (>=24px, либо >=18.66px полужирным).
  *
  *   node test/contrast.test.mjs
  */
@@ -16,48 +19,46 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const css = readFileSync(join(here, '..', 'app', 'styles.css'), 'utf8');
+const raw = readFileSync(join(here, '..', 'app', 'styles.css'), 'utf8');
+const css = raw.replace(/\/\*[\s\S]*?\*\//g, '');
 
-const hex = (h) => {
-  const v = h.replace('#', '');
-  return [0, 2, 4].map(i => parseInt(v.slice(i, i + 2), 16));
-};
+const hex = (h) => { const v = h.replace('#', ''); return [0, 2, 4].map(i => parseInt(v.slice(i, i + 2), 16)); };
 const over = (fg, a, bg) => fg.map((c, i) => a * c + (1 - a) * bg[i]);
 const lum = (rgb) => {
-  const [r, g, b] = rgb.map(c => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  });
+  const [r, g, b] = rgb.map(c => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); });
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
-const ratio = (a, b) => {
-  const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x);
-  return (l1 + 0.05) / (l2 + 0.05);
-};
+const ratio = (a, b) => { const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x); return (l1 + 0.05) / (l2 + 0.05); };
 
-/** Из CSS достаём фактические значения, чтобы тест не разъехался с файлом. */
 function cssVar(name) {
   const m = css.match(new RegExp('--' + name + ':\\s*([^;]+);'));
   if (!m) throw new Error('переменная --' + name + ' не найдена в styles.css');
   return m[1].trim();
 }
-function alphaOfWhite(value) {
-  const m = value.match(/rgba\(\s*242,\s*245,\s*249,\s*\.?([0-9]+)\s*\)/);
-  if (!m) return null;
-  return parseFloat('0.' + m[1]);
+/** Разбирает #rrggbb или rgba(r,g,b,.a) в { rgb, a }. */
+function color(spec) {
+  const r = spec.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*(\.?\d+))?\s*\)/);
+  if (r) return { rgb: [+r[1], +r[2], +r[3]], a: r[4] === undefined ? 1 : parseFloat(r[4].startsWith('.') ? '0' + r[4] : r[4]) };
+  const h = spec.match(/#[0-9A-Fa-f]{6}/);
+  if (h) return { rgb: hex(h[0]), a: 1 };
+  throw new Error('не разобран цвет: ' + spec);
 }
 
-const BASE = hex('#070A0F');
-// Самая светлая точка фона: два пятна градиента накладываются друг на друга.
-// Считаем пессимистично — синее и фиолетовое пятно по 0.5 прозрачности.
-const auroraAlpha = parseFloat('0' + (css.match(/\.aurora span \{[^}]*opacity:\s*(\.\d+)/) || [, '.38'])[1]);
-let bright = over(hex('#2B4CCF'), auroraAlpha, BASE);
-bright = over(hex('#7A3BD6'), auroraAlpha * 0.7, bright);
-// плюс заливка стекла — берётся из --glass-fill как есть, включая её цвет:
-// тёмное стекло опускает худший фон, белое поднимало его до нечитаемого.
-const gf = cssVar('glass-fill').match(/rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*\.?(\d+)\s*\)/);
-if (!gf) throw new Error('не разобрано значение --glass-fill: ' + cssVar('glass-fill'));
-const WORST_BG = over([+gf[1], +gf[2], +gf[3]], parseFloat('0.' + gf[4]), bright);
+// --- два крайних фона под стеклом -------------------------------------------
+const base = color(cssVar('bg-0')).rgb;
+const auroraA = parseFloat('0' + (css.match(/\.aurora span \{[^}]*opacity:\s*(\.\d+)/) || [, '.5'])[1]);
+const blobs = [...css.matchAll(/\.aurora span:nth-child\(\d\)[^}]*radial-gradient\(circle,\s*(#[0-9A-Fa-f]{6})/g)]
+  .map(m => hex(m[1]));
+if (blobs.length < 3) throw new Error('не найдены цвета фоновых пятен');
+
+// «самый насыщенный» участок: два пятна друг на друге
+let tinted = over(blobs[0], auroraA, base);
+tinted = over(blobs[1], auroraA * 0.7, tinted);
+
+const glass = color(cssVar('glass-fill'));
+const BG_A = over(glass.rgb, glass.a, tinted);   // стекло над пятнами
+const BG_B = over(glass.rgb, glass.a, base);     // стекло над чистой базой
+const EXTREMES = [BG_A, BG_B];
 
 let passed = 0; const failures = [];
 function check(name, fn) {
@@ -65,61 +66,64 @@ function check(name, fn) {
   catch (e) { failures.push(name + ' — ' + e.message); console.log('  FAIL ' + name + '\n         ' + e.message); }
 }
 
-function expectContrast(label, colorSpec, minRatio) {
-  let rgb;
-  const a = alphaOfWhite(colorSpec);
-  if (a !== null) rgb = over(hex('#F2F5F9'), a, WORST_BG);
-  else rgb = hex(colorSpec);
-  const r = ratio(rgb, WORST_BG);
-  if (r < minRatio) {
-    throw new Error(`${label}: ${r.toFixed(2)}:1, нужно ${minRatio}:1 ` +
-      `(на худшем фоне rgb(${WORST_BG.map(Math.round).join(',')}))`);
-  }
+/** Худший контраст по обоим крайним фонам. */
+function worst(textSpec, backgrounds) {
+  const t = color(textSpec);
+  return backgrounds.reduce((min, bg) => {
+    const ink = t.a === 1 ? t.rgb : over(t.rgb, t.a, bg);
+    return Math.min(min, ratio(ink, bg));
+  }, Infinity);
+}
+function expect(label, textSpec, minRatio, backgrounds) {
+  const r = worst(textSpec, backgrounds || EXTREMES);
   console.log(`         ${label}: ${r.toFixed(2)}:1 (порог ${minRatio})`);
+  if (r < minRatio) throw new Error(`${label}: ${r.toFixed(2)}:1, нужно ${minRatio}:1`);
 }
 
-console.log('Контраст на худшем фоне под стеклом');
-console.log('         фон: rgb(' + WORST_BG.map(Math.round).join(',') + ')');
+console.log('Контраст на стекле, худший из двух крайних фонов');
+console.log('         фон над пятнами: rgb(' + BG_A.map(Math.round).join(',') + ')');
+console.log('         фон над базой:   rgb(' + BG_B.map(Math.round).join(',') + ')');
 
-check('основной текст --fg проходит 4.5:1', () => {
-  expectContrast('--fg', cssVar('fg'), 4.5);
-});
-
-check('приглушённый --fg-dim проходит 4.5:1 (используется в 15px тексте)', () => {
-  expectContrast('--fg-dim', cssVar('fg-dim'), 4.5);
-});
-
-check('самый бледный --fg-faint проходит 4.5:1 (используется в 10-13px)', () => {
-  expectContrast('--fg-faint', cssVar('fg-faint'), 4.5);
-});
+check('основной текст --fg проходит 4.5:1', () => expect('--fg', cssVar('fg'), 4.5));
+check('вторичный --fg-dim проходит 4.5:1 (в тексте 15px)', () => expect('--fg-dim', cssVar('fg-dim'), 4.5));
+check('самый бледный --fg-faint проходит 4.5:1 (в тексте 10-13px)', () => expect('--fg-faint', cssVar('fg-faint'), 4.5));
 
 check('цвет ответа проходит 3:1 как крупный текст', () => {
   const m = css.match(/\.answer\s*\{[^}]*color:\s*(#[0-9A-Fa-f]{6})/);
   if (!m) throw new Error('цвет .answer не найден');
-  expectContrast('.answer', m[1], 3);
+  expect('.answer', m[1], 3);
 });
 
-check('белый текст на кнопках оценок проходит 4.5:1', () => {
-  // Цвета берутся из CSS, а не хранятся копией: копия разъедется при первой правке.
-  // Проверяется КАЖДАЯ остановка градиента — светлая обычно и есть худший случай.
-  const names = ['again', 'hard', 'good', 'easy'];
-  let checked = 0;
-  names.forEach(function (n) {
-    const rule = css.match(new RegExp('\\.rate-' + n + '\\s*\\{[^}]*background:\\s*linear-gradient\\(([^;]+)\\);'));
-    if (!rule) throw new Error('градиент .rate-' + n + ' не найден в styles.css');
-    const stops = [...rule[1].matchAll(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*\.?(\d+)\)/g)];
-    if (!stops.length) throw new Error('в .rate-' + n + ' не разобрана ни одна остановка');
-    stops.forEach(function (m, i) {
-      const rgb = [+m[1], +m[2], +m[3]];
-      const a = parseFloat('0.' + m[4]);
-      const bg = over(rgb, a, WORST_BG);
-      const r = ratio([255, 255, 255], bg);
-      console.log(`         rate-${n} остановка ${i + 1}: ${r.toFixed(2)}:1`);
-      if (r < 4.5) throw new Error(`rate-${n} остановка ${i + 1}: ${r.toFixed(2)}:1, нужно 4.5:1`);
-      checked++;
-    });
+check('текст на кнопках оценок проходит 4.5:1', () => {
+  // Цвета читаются из CSS, а не хранятся копией: копия разъедется при первой правке.
+  ['again', 'hard', 'good', 'easy'].forEach(function (n) {
+    const fill = color(cssVar(n + '-fill'));
+    const ink = cssVar(n + '-ink');
+    // заливка кнопки лежит поверх стекла, поэтому фон считается в два слоя
+    const backgrounds = EXTREMES.map(bg => over(fill.rgb, fill.a, bg));
+    expect('rate-' + n, ink, 4.5, backgrounds);
   });
-  if (checked < 8) throw new Error('ожидалось минимум 8 остановок, проверено ' + checked);
+});
+
+check('текст на главной кнопке проходит 4.5:1', () => {
+  const grad = css.match(/\.btn-primary\s*\{[^}]*background:\s*linear-gradient\(([^;]+)\);/);
+  if (!grad) throw new Error('градиент .btn-primary не найден');
+  const stops = [...grad[1].matchAll(/var\(\s*(--[\w-]+)\s*\)|(#[0-9A-Fa-f]{6})/g)]
+    .map(m => m[1] ? cssVar(m[1].slice(2)) : m[2]);
+  if (!stops.length) throw new Error('остановки градиента не разобраны');
+  stops.forEach(function (stop, i) {
+    const bg = [color(stop).rgb];
+    expect('btn-primary остановка ' + (i + 1), '#FFFFFF', 4.5, bg);
+  });
+});
+
+check('баннер предупреждения читается', () => {
+  const rule = css.match(/\.banner\s*\{([^}]*)\}/);
+  const ink = rule[1].match(/color:\s*(#[0-9A-Fa-f]{6})/);
+  const fill = rule[1].match(/background:\s*(rgba\([^)]+\))/);
+  if (!ink || !fill) throw new Error('цвет или фон баннера не найдены');
+  const f = color(fill[1]);
+  expect('.banner', ink[1], 4.5, EXTREMES.map(bg => over(f.rgb, f.a, bg)));
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
