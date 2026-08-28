@@ -21,6 +21,26 @@
         .then(function (r) { return r.json(); });
     },
 
+    getGrammar: function () {
+      var url = base() + '?action=grammar&initData=' + encodeURIComponent(initData());
+      return fetch(url, { method: 'GET', redirect: 'follow' })
+        .then(function (r) { return r.json(); });
+    },
+
+    flushGrammar: function (batchId, rounds) {
+      return fetch(base(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow',
+        body: JSON.stringify({
+          action: 'grammar_flush',
+          initData: initData(),
+          batch_id: batchId,
+          rounds: rounds
+        })
+      }).then(function (r) { return r.json(); });
+    },
+
     flush: function (batchId, reviews) {
       return fetch(base(), {
         method: 'POST',

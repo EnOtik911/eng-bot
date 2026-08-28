@@ -148,3 +148,103 @@ function flushRecord_(batchId, count) {
   var lastRow = sh.getLastRow();
   if (lastRow > 201) sh.deleteRows(2, lastRow - 201);   // keep the newest 200
 }
+
+/* ---------------------------------------------------------------------------
+ * Grammar. Same two rules as above: whole ranges, lock only around the write.
+ * The generic reader is worth the indirection here — patterns and items differ
+ * only by their column list, and a second hand-rolled reader would be the third
+ * copy of the same loop.
+ * ------------------------------------------------------------------------- */
+
+function readRows_(sheetName, columns) {
+  var sh = sheet_(sheetName);
+  var lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+  var values = sh.getRange(2, 1, lastRow - 1, columns.length).getValues();
+  var out = [];
+  for (var i = 0; i < values.length; i++) {
+    if (!values[i][0]) continue;
+    var o = { _row: i + 2 };
+    for (var c = 0; c < columns.length; c++) o[columns[c]] = values[i][c];
+    out.push(o);
+  }
+  return out;
+}
+
+function writeRowUpdates_(sheetName, columns, updates) {
+  if (!updates.length) return 0;
+  var sh = sheet_(sheetName);
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error('LOCKED');
+  try {
+    updates.sort(function (a, b) { return a._row - b._row; });
+    var written = 0;
+    var i = 0;
+    while (i < updates.length) {
+      var start = i;
+      while (i + 1 < updates.length && updates[i + 1]._row === updates[i]._row + 1) i++;
+      var firstRow = updates[start]._row;
+      var count = updates[i]._row - firstRow + 1;
+      var range = sh.getRange(firstRow, 1, count, columns.length);
+      var block = range.getValues();
+      for (var u = start; u <= i; u++) {
+        var rowIdx = updates[u]._row - firstRow;
+        var patch = updates[u].patch;
+        Object.keys(patch).forEach(function (col) {
+          var c = columns.indexOf(col);
+          if (c < 0) throw new Error('Unknown column in ' + sheetName + ': ' + col);
+          block[rowIdx][c] = patch[col];
+        });
+        written++;
+      }
+      range.setValues(block);
+      i++;
+    }
+    SpreadsheetApp.flush();
+    return written;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function appendRows_(sheetName, columns, rows) {
+  if (!rows.length) return 0;
+  var sh = sheet_(sheetName);
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error('LOCKED');
+  try {
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, columns.length).setValues(rows);
+    SpreadsheetApp.flush();
+    return rows.length;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function readPatterns_() { return readRows_(SHEET_PATTERNS, PATTERN_COLUMNS); }
+function readGrammarItems_() { return readRows_(SHEET_GRAMMAR_ITEMS, GRAMMAR_ITEM_COLUMNS); }
+
+function writePatternUpdates_(updates) {
+  return writeRowUpdates_(SHEET_PATTERNS, PATTERN_COLUMNS, updates);
+}
+function writeGrammarItemUpdates_(updates) {
+  return writeRowUpdates_(SHEET_GRAMMAR_ITEMS, GRAMMAR_ITEM_COLUMNS, updates);
+}
+
+function grammarLogSheetName_() {
+  return 'grammar_log_' + new Date().getFullYear();
+}
+
+function appendGrammarLog_(rows) {
+  if (!rows.length) return;
+  var name = grammarLogSheetName_();
+  var ss = ss_();
+  var sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name);
+    sh.getRange(1, 1, 1, GRAMMAR_LOG_COLUMNS.length)
+      .setValues([GRAMMAR_LOG_COLUMNS]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, GRAMMAR_LOG_COLUMNS.length).setValues(rows);
+}

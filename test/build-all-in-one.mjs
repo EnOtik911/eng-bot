@@ -14,7 +14,8 @@ import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const order = ['Config.gs', 'Fsrs.gs', 'Store.gs', 'Auth.gs', 'Session.gs',
-  'Import.gs', 'Bot.gs', 'Triggers.gs', 'Setup.gs', 'Menu.gs', 'Main.gs'];
+  'Grammar.gs', 'Import.gs', 'GrammarImport.gs', 'GrammarSeed.gs',
+  'Bot.gs', 'Triggers.gs', 'Setup.gs', 'Menu.gs', 'Main.gs'];
 
 const present = readdirSync(join(root, 'gas')).filter(f => f.endsWith('.gs')).sort();
 const missing = present.filter(f => !order.includes(f));

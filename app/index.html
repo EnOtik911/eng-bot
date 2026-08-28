@@ -16,6 +16,7 @@
 <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
 
 <header class="topbar">
+  <button id="home-btn" class="g-back" title="На главный экран" aria-label="На главный экран" hidden>‹</button>
   <span id="counter" class="counter"></span>
   <span class="progress-track"><span id="progress" class="progress-fill"></span></span>
   <span id="pending" class="pending"></span>
@@ -77,6 +78,86 @@
     <button id="again-session" class="btn btn-quiet">Ещё раз</button>
   </section>
 
+  <section id="screen-home" hidden class="state">
+    <h1 class="home-title">Что тренируем</h1>
+    <div class="tiles">
+      <button id="tile-vocab" class="tile">
+        <span class="tile-name">Лексика</span>
+        <span class="tile-sub">слова и словосочетания по расписанию</span>
+        <span id="tile-vocab-count" class="tile-count"></span>
+      </button>
+      <button id="tile-grammar" class="tile">
+        <span class="tile-name">Грамматика</span>
+        <span class="tile-sub">времена и порядок слов, по шаблонам</span>
+        <span id="tile-grammar-count" class="tile-count"></span>
+      </button>
+    </div>
+    <p id="home-note" class="hint" hidden></p>
+  </section>
+
+  <section id="screen-picker" hidden class="state">
+    <h1 class="home-title">Грамматика</h1>
+    <button id="pick-mixed" class="tile tile-wide">
+      <span class="tile-name">Вперемешку</span>
+      <span id="pick-mixed-sub" class="tile-sub"></span>
+    </button>
+    <p class="picker-or">или выбери шаблон</p>
+    <div id="pattern-list" class="pattern-list"></div>
+  </section>
+
+  <section id="screen-grammar" hidden>
+    <article id="gcard" class="card">
+      <div class="meta">
+        <a id="g-label" class="tag tag-accent" target="_blank" rel="noopener"></a>
+        <span id="g-title" class="tag"></span>
+        <span id="g-kind" class="tag"></span>
+      </div>
+
+      <p id="g-instruction" class="ghint-line"></p>
+      <p id="g-prompt" class="prompt prompt-ru" hidden></p>
+      <p id="g-stem" class="g-stem" hidden></p>
+
+      <div id="g-tokens" class="tokens" hidden>
+        <div id="g-slots" class="slots" aria-live="polite"></div>
+        <div id="g-bank" class="bank"></div>
+      </div>
+
+      <input id="g-input" class="typebox" type="text" autocomplete="off"
+             autocapitalize="none" autocorrect="off" spellcheck="false" hidden>
+
+      <p id="g-hint" class="ghint" hidden></p>
+
+      <div id="g-verdict" class="verdict" hidden>
+        <p id="g-verdict-line" class="verdict-line"></p>
+        <p id="g-answer" class="answer"></p>
+      </div>
+
+      <div class="g-actions">
+        <button id="g-check" class="btn btn-primary">Проверить</button>
+        <button id="g-next" class="btn btn-primary" hidden>Дальше</button>
+        <button id="g-hint-btn" class="btn btn-quiet">Подсказка</button>
+      </div>
+    </article>
+  </section>
+
+  <section id="screen-round" hidden class="state center">
+    <div class="state-icon">✓</div>
+    <h1>Раунд закрыт</h1>
+    <p id="round-label" class="muted"></p>
+    <p id="round-score" class="hint"></p>
+    <button id="round-next" class="btn btn-primary">Следующий шаблон</button>
+    <button id="round-again" class="btn btn-quiet">Ещё раунд по этому шаблону</button>
+  </section>
+
+  <section id="screen-gdone" hidden class="state center">
+    <div class="state-icon">✓</div>
+    <h1>Грамматика на сегодня закрыта</h1>
+    <p id="gdone-body" class="muted"></p>
+    <pre id="gdone-outcomes" class="diag-out" hidden></pre>
+    <p id="gflush-status" class="hint"></p>
+    <button id="gdone-home" class="btn btn-quiet">Назад</button>
+  </section>
+
   <section id="screen-error" hidden class="state center">
     <div class="state-icon">!</div>
     <h1>Не получилось</h1>
@@ -93,7 +174,10 @@
 <script src="i18n.js"></script>
 <script src="store.js"></script>
 <script src="api.js"></script>
+<script src="answer.js"></script>
 <script src="session.js"></script>
+<script src="grammar.js"></script>
 <script src="ui.js"></script>
+<script src="grammar-ui.js"></script>
 </body>
 </html>

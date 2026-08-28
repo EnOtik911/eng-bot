@@ -11,6 +11,10 @@ var SHEET_SETTINGS = 'settings';
 var SHEET_INBOX = 'inbox';
 var SHEET_REJECTS = 'rejects';
 var SHEET_FLUSH_LOG = 'flush_log';
+var SHEET_PATTERNS = 'patterns';
+var SHEET_GRAMMAR_ITEMS = 'grammar_items';
+var SHEET_GRAMMAR_INBOX = 'grammar_inbox';
+var SHEET_GRAMMAR_REJECTS = 'grammar_rejects';
 
 var CARD_COLUMNS = [
   'card_id', 'item_id', 'direction', 'type', 'en', 'ru', 'example_en', 'example_ru',
@@ -20,6 +24,33 @@ var CARD_COLUMNS = [
   // бы значения во всех существующих строках.
   'first_review'
 ];
+
+/**
+ * A grammar PATTERN carries the FSRS state — not the individual sentence.
+ * Every review of a pattern draws a different item from its pool, so what gets
+ * strengthened is the rule and not one memorised sentence. That is the single
+ * decision the whole grammar block rests on; see docs/spec-grammar.md.
+ */
+var PATTERN_COLUMNS = [
+  'pattern_id', 'order_index', 'label', 'title_ru', 'notes_slug',
+  'state', 'due', 'stability', 'difficulty', 'reps', 'lapses',
+  'last_review', 'first_review', 'created_at', 'user_id', 'source_batch'
+];
+
+var GRAMMAR_ITEM_COLUMNS = [
+  'item_id', 'pattern_id', 'kind', 'prompt_ru', 'stem', 'answer', 'tokens',
+  'hint_ru', 'serve_count', 'last_served', 'created_at', 'source_batch'
+];
+
+var GRAMMAR_IMPORT_COLUMNS = [
+  'pattern_id', 'order_index', 'label', 'title_ru', 'notes_slug',
+  'kind', 'prompt_ru', 'stem', 'answer', 'tokens', 'hint_ru'
+];
+
+var GRAMMAR_LOG_COLUMNS = ['pattern_id', 'ts', 'rating', 'errors', 'hints', 'items',
+  'elapsed_days', 'interval_days', 'stability', 'difficulty', 'batch_id'];
+
+var VALID_KINDS = ['scramble', 'gapfill', 'transform', 'fix'];
 
 var IMPORT_COLUMNS = ['type', 'en', 'ru', 'example_en', 'example_ru', 'layer', 'topic', 'note'];
 var LOG_COLUMNS = ['card_id', 'ts', 'rating', 'elapsed_days', 'interval_days',
@@ -35,6 +66,13 @@ var DEFAULT_SETTINGS = {
   leech_threshold: '5',
   unlock_interval_days: '21',
   ping_hour: '8',
+  // Grammar has its own knobs: patterns are few and each one carries a pool of
+  // sentences, so a higher retention costs almost nothing here while a rule that
+  // is 85% remembered is still unusable in speech.
+  grammar_daily_new_target: '1',
+  grammar_desired_retention: '0.9',
+  grammar_items_per_round: '3',
+  grammar_session_cap: '8',
   timezone: 'Europe/Moscow',
   ui_lang: 'ru',
   last_trigger_run: '',

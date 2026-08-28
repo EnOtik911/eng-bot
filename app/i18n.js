@@ -3,6 +3,14 @@
  * on purpose (GATE 1, deviation 2), but the structure that makes it a twenty-line
  * change later is in place from day one.
  */
+function plural(n, one, few, many) {
+  var m10 = n % 10;
+  var m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+
 window.I18N = {
   ru: {
     loading: 'Загружаю очередь…',
@@ -36,6 +44,62 @@ window.I18N = {
     diag: 'Показать диагностику',
     errNoSdk: 'SDK Telegram не загрузился — страница открыта вне Telegram или скрипт telegram.org заблокирован',
     errNoInitData: 'Telegram не передал данные запуска. Так бывает, если приложение открыто по ссылке, а не кнопкой Mini App, либо кеш держит старую версию страницы',
-    codeLabel: 'код'
+    codeLabel: 'код',
+
+    // --- главный экран и грамматика ---
+    homeTitle: 'Что тренируем',
+    blockVocab: 'Лексика',
+    blockVocabSub: 'слова и словосочетания по расписанию',
+    blockGrammar: 'Грамматика',
+    blockGrammarSub: 'времена и порядок слов, по шаблонам',
+    homeDue: function (n) { return n ? 'к повторению: ' + n : 'долгов нет'; },
+    homeNew: function (n) { return n ? ' · новых: ' + n : ''; },
+    grammarUnavailable: 'Грамматика ещё не залита. В таблице: «Первичная настройка листов» → «Засеять грамматику» → «Импортировать грамматику»',
+    back: 'Назад',
+    pickerTitle: 'Грамматика',
+    pickerMixed: 'Вперемешку',
+    pickerMixedSub: function (n) {
+      return n ? 'по расписанию: ' + n + ' ' + plural(n, 'шаблон', 'шаблона', 'шаблонов')
+        : 'на сегодня всё повторено';
+    },
+    pickerOr: 'или выбери шаблон',
+    pickerDue: 'пора',
+    pickerNew: 'новый',
+    pickerScheduled: function (d) { return 'до ' + d; },
+    pickerPool: function (n) {
+      return n + ' ' + plural(n, 'задание', 'задания', 'заданий');
+    },
+
+    kindScramble: 'Собери предложение',
+    kindGapfill: 'Впиши пропущенное',
+    kindTransform: 'Перестрой предложение',
+    kindFix: 'Найди и исправь ошибку',
+
+    checkBtn: 'Проверить',
+    hintBtn: 'Подсказка',
+    nextBtn: 'Дальше',
+    tokenHint: 'Нажимай слова в нужном порядке',
+    typeAnswer: 'Впиши ответ',
+    correct: 'Верно',
+    wrong: 'Не так',
+    correctAnswer: 'Правильно так:',
+    retryLabel: 'Повтор — набери правильно',
+    hintPenalty: 'С подсказкой раунд оценивается не выше «Помню»',
+    theoryLink: 'разобрать теорию',
+
+    roundDone: 'Раунд закрыт',
+    roundScore: function (ok, total) { return 'Верно с первого раза: ' + ok + ' из ' + total; },
+    roundHints: function (n) { return n ? ' · подсказок: ' + n : ''; },
+    oneMoreRound: 'Ещё раунд по этому шаблону',
+    nextPattern: 'Следующий шаблон',
+    grammarDone: 'Грамматика на сегодня закрыта',
+    grammarDoneBody: function (n) {
+      return 'Раундов пройдено: ' + n;
+    },
+    grammarEmpty: 'Все шаблоны повторены, а дневная норма новых израсходована. Возвращайся завтра или выбери шаблон вручную.',
+    ratingLabel: { 1: 'Не помню', 2: 'С трудом', 3: 'Помню', 4: 'Легко' },
+    nextIn: function (days) {
+      return 'следующий показ через ' + days + ' ' + plural(days, 'день', 'дня', 'дней');
+    }
   }
 };

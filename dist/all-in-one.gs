@@ -24,6 +24,10 @@ var SHEET_SETTINGS = 'settings';
 var SHEET_INBOX = 'inbox';
 var SHEET_REJECTS = 'rejects';
 var SHEET_FLUSH_LOG = 'flush_log';
+var SHEET_PATTERNS = 'patterns';
+var SHEET_GRAMMAR_ITEMS = 'grammar_items';
+var SHEET_GRAMMAR_INBOX = 'grammar_inbox';
+var SHEET_GRAMMAR_REJECTS = 'grammar_rejects';
 
 var CARD_COLUMNS = [
   'card_id', 'item_id', 'direction', 'type', 'en', 'ru', 'example_en', 'example_ru',
@@ -33,6 +37,33 @@ var CARD_COLUMNS = [
   // бы значения во всех существующих строках.
   'first_review'
 ];
+
+/**
+ * A grammar PATTERN carries the FSRS state — not the individual sentence.
+ * Every review of a pattern draws a different item from its pool, so what gets
+ * strengthened is the rule and not one memorised sentence. That is the single
+ * decision the whole grammar block rests on; see docs/spec-grammar.md.
+ */
+var PATTERN_COLUMNS = [
+  'pattern_id', 'order_index', 'label', 'title_ru', 'notes_slug',
+  'state', 'due', 'stability', 'difficulty', 'reps', 'lapses',
+  'last_review', 'first_review', 'created_at', 'user_id', 'source_batch'
+];
+
+var GRAMMAR_ITEM_COLUMNS = [
+  'item_id', 'pattern_id', 'kind', 'prompt_ru', 'stem', 'answer', 'tokens',
+  'hint_ru', 'serve_count', 'last_served', 'created_at', 'source_batch'
+];
+
+var GRAMMAR_IMPORT_COLUMNS = [
+  'pattern_id', 'order_index', 'label', 'title_ru', 'notes_slug',
+  'kind', 'prompt_ru', 'stem', 'answer', 'tokens', 'hint_ru'
+];
+
+var GRAMMAR_LOG_COLUMNS = ['pattern_id', 'ts', 'rating', 'errors', 'hints', 'items',
+  'elapsed_days', 'interval_days', 'stability', 'difficulty', 'batch_id'];
+
+var VALID_KINDS = ['scramble', 'gapfill', 'transform', 'fix'];
 
 var IMPORT_COLUMNS = ['type', 'en', 'ru', 'example_en', 'example_ru', 'layer', 'topic', 'note'];
 var LOG_COLUMNS = ['card_id', 'ts', 'rating', 'elapsed_days', 'interval_days',
@@ -48,6 +79,13 @@ var DEFAULT_SETTINGS = {
   leech_threshold: '5',
   unlock_interval_days: '21',
   ping_hour: '8',
+  // Grammar has its own knobs: patterns are few and each one carries a pool of
+  // sentences, so a higher retention costs almost nothing here while a rule that
+  // is 85% remembered is still unusable in speech.
+  grammar_daily_new_target: '1',
+  grammar_desired_retention: '0.9',
+  grammar_items_per_round: '3',
+  grammar_session_cap: '8',
   timezone: 'Europe/Moscow',
   ui_lang: 'ru',
   last_trigger_run: '',
@@ -414,6 +452,106 @@ function flushRecord_(batchId, count) {
   sh.appendRow([batchId, new Date().toISOString(), count]);
   var lastRow = sh.getLastRow();
   if (lastRow > 201) sh.deleteRows(2, lastRow - 201);   // keep the newest 200
+}
+
+/* ---------------------------------------------------------------------------
+ * Grammar. Same two rules as above: whole ranges, lock only around the write.
+ * The generic reader is worth the indirection here — patterns and items differ
+ * only by their column list, and a second hand-rolled reader would be the third
+ * copy of the same loop.
+ * ------------------------------------------------------------------------- */
+
+function readRows_(sheetName, columns) {
+  var sh = sheet_(sheetName);
+  var lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+  var values = sh.getRange(2, 1, lastRow - 1, columns.length).getValues();
+  var out = [];
+  for (var i = 0; i < values.length; i++) {
+    if (!values[i][0]) continue;
+    var o = { _row: i + 2 };
+    for (var c = 0; c < columns.length; c++) o[columns[c]] = values[i][c];
+    out.push(o);
+  }
+  return out;
+}
+
+function writeRowUpdates_(sheetName, columns, updates) {
+  if (!updates.length) return 0;
+  var sh = sheet_(sheetName);
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error('LOCKED');
+  try {
+    updates.sort(function (a, b) { return a._row - b._row; });
+    var written = 0;
+    var i = 0;
+    while (i < updates.length) {
+      var start = i;
+      while (i + 1 < updates.length && updates[i + 1]._row === updates[i]._row + 1) i++;
+      var firstRow = updates[start]._row;
+      var count = updates[i]._row - firstRow + 1;
+      var range = sh.getRange(firstRow, 1, count, columns.length);
+      var block = range.getValues();
+      for (var u = start; u <= i; u++) {
+        var rowIdx = updates[u]._row - firstRow;
+        var patch = updates[u].patch;
+        Object.keys(patch).forEach(function (col) {
+          var c = columns.indexOf(col);
+          if (c < 0) throw new Error('Unknown column in ' + sheetName + ': ' + col);
+          block[rowIdx][c] = patch[col];
+        });
+        written++;
+      }
+      range.setValues(block);
+      i++;
+    }
+    SpreadsheetApp.flush();
+    return written;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function appendRows_(sheetName, columns, rows) {
+  if (!rows.length) return 0;
+  var sh = sheet_(sheetName);
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error('LOCKED');
+  try {
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, columns.length).setValues(rows);
+    SpreadsheetApp.flush();
+    return rows.length;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function readPatterns_() { return readRows_(SHEET_PATTERNS, PATTERN_COLUMNS); }
+function readGrammarItems_() { return readRows_(SHEET_GRAMMAR_ITEMS, GRAMMAR_ITEM_COLUMNS); }
+
+function writePatternUpdates_(updates) {
+  return writeRowUpdates_(SHEET_PATTERNS, PATTERN_COLUMNS, updates);
+}
+function writeGrammarItemUpdates_(updates) {
+  return writeRowUpdates_(SHEET_GRAMMAR_ITEMS, GRAMMAR_ITEM_COLUMNS, updates);
+}
+
+function grammarLogSheetName_() {
+  return 'grammar_log_' + new Date().getFullYear();
+}
+
+function appendGrammarLog_(rows) {
+  if (!rows.length) return;
+  var name = grammarLogSheetName_();
+  var ss = ss_();
+  var sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name);
+    sh.getRange(1, 1, 1, GRAMMAR_LOG_COLUMNS.length)
+      .setValues([GRAMMAR_LOG_COLUMNS]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, GRAMMAR_LOG_COLUMNS.length).setValues(rows);
 }
 
 // ==========================================================================
@@ -867,6 +1005,300 @@ function applyFlush(userId, batchId, reviews) {
 }
 
 // ==========================================================================
+// Grammar.gs
+// ==========================================================================
+
+/**
+ * Grammar block. What makes it different from the vocabulary block, in one line:
+ * FSRS state lives on the PATTERN, and every review draws different sentences
+ * from that pattern's pool.
+ *
+ * If the same sentence came back on schedule, the thing that got strengthened
+ * would be the sentence. The rule is what has to transfer into speech, so the
+ * rule is what gets scheduled — see docs/spec-grammar.md.
+ *
+ * One GET brings the whole grammar block down, including item pools for every
+ * introduced pattern. That is deliberate: picking a pattern by hand must not cost
+ * a round trip, and the whole block then works offline for free.
+ */
+
+/**
+ * Rating is derived from what actually happened, not self-reported.
+ *
+ * Grammar differs from vocabulary here: "did I know this word" is only knowable
+ * by the learner, but "is this sentence correct" is objectively checkable. Asking
+ * for a self-rating on top of an objective check would be inventing noise.
+ *
+ * Revealing a hint caps the round at GOOD. Without that cap, a hinted answer
+ * would look identical to a known one and the interval would grow on borrowed
+ * knowledge — the scheduler would be lying to itself.
+ */
+function grammarRating_(errors, hints, total) {
+  if (!total) return RATING_GOOD;
+  if (errors === 0) return hints > 0 ? RATING_GOOD : RATING_EASY;
+  if (errors * 3 <= total) return RATING_HARD;
+  return RATING_AGAIN;
+}
+
+function grammarSettings_(settings) {
+  return {
+    tz: settings.timezone || 'Europe/Moscow',
+    retention: parseFloat(settings.grammar_desired_retention) || 0.9,
+    perRound: parseInt(settings.grammar_items_per_round, 10) || 3,
+    sessionCap: parseInt(settings.grammar_session_cap, 10) || 8,
+    newTarget: parseInt(settings.grammar_daily_new_target, 10) || 1,
+    leechThreshold: parseInt(settings.leech_threshold, 10) || 5
+  };
+}
+
+/**
+ * Pool rotation: least-served first, oldest-served next. Ties broken by item_id
+ * so the order is stable rather than accidental — an unstable tie-break would make
+ * the same call return different pools and nothing would be reproducible.
+ */
+function sortPool_(items) {
+  return items.slice().sort(function (a, b) {
+    var sa = Number(a.serve_count) || 0;
+    var sb = Number(b.serve_count) || 0;
+    if (sa !== sb) return sa - sb;
+    var la = String(a.last_served || '');
+    var lb = String(b.last_served || '');
+    if (la !== lb) return la < lb ? -1 : 1;
+    return String(a.item_id) < String(b.item_id) ? -1 : 1;
+  });
+}
+
+function publicItem_(it) {
+  return {
+    item_id: it.item_id,
+    pattern_id: it.pattern_id,
+    kind: it.kind,
+    prompt_ru: it.prompt_ru,
+    stem: it.stem,
+    answer: it.answer,
+    tokens: it.tokens ? String(it.tokens).split('|').map(function (t) { return t.trim(); })
+      .filter(function (t) { return t.length > 0; }) : [],
+    hint_ru: it.hint_ru
+  };
+}
+
+/**
+ * The whole grammar block in one payload:
+ *   patterns — every pattern with its due state, for the picker
+ *   pools    — items for the patterns that are playable right now
+ *   queue    — pattern ids in scheduler order, for the "mixed" mode
+ */
+function buildGrammarSession(userId) {
+  var settings = readSettings_();
+  var g = grammarSettings_(settings);
+  var today = todayStr_(g.tz);
+
+  var all = readPatterns_();
+  var mine = all.filter(function (p) { return String(p.user_id) === String(userId); });
+
+  var items = readGrammarItems_();
+  var byPattern = {};
+  items.forEach(function (it) {
+    var k = String(it.pattern_id);
+    if (!byPattern[k]) byPattern[k] = [];
+    byPattern[k].push(it);
+  });
+
+  var introducedToday = 0;
+  mine.forEach(function (p) {
+    if (p.first_review && String(p.first_review).slice(0, 10) === today) introducedToday++;
+  });
+  var newAllowance = Math.max(g.newTarget - introducedToday, 0);
+
+  mine.sort(function (a, b) {
+    var oa = Number(a.order_index) || 0;
+    var ob = Number(b.order_index) || 0;
+    if (oa !== ob) return oa - ob;
+    return String(a.pattern_id) < String(b.pattern_id) ? -1 : 1;
+  });
+
+  var due = [];
+  var fresh = [];
+  var later = [];
+  mine.forEach(function (p) {
+    var state = String(p.state || 'new');
+    if (state === 'suspended') return;
+    var pool = byPattern[String(p.pattern_id)] || [];
+    if (!pool.length) return;                       // a pattern with no sentences is not playable
+    if (state === 'new') { fresh.push(p); return; }
+    var dueStr = p.due ? String(p.due).slice(0, 10) : '';
+    if (dueStr && dueStr <= today) due.push(p); else later.push(p);
+  });
+
+  // Debt before growth, exactly as in the vocabulary block.
+  var queue = due.concat(fresh.slice(0, newAllowance)).slice(0, g.sessionCap);
+
+  // Pools are sent for everything playable, not only for the queue: choosing a
+  // pattern by hand is a first-class mode and must not need another round trip.
+  var pools = {};
+  var poolDepth = g.perRound * 2;
+  due.concat(fresh, later).forEach(function (p) {
+    var key = String(p.pattern_id);
+    if (pools[key]) return;
+    pools[key] = sortPool_(byPattern[key]).slice(0, poolDepth).map(publicItem_);
+  });
+
+  return {
+    ok: true,
+    server_ts: new Date().toISOString(),
+    today: today,
+    settings: {
+      items_per_round: g.perRound,
+      desired_retention: g.retention,
+      daily_new_target: g.newTarget,
+      session_cap: g.sessionCap
+    },
+    patterns: mine.map(function (p) {
+      var pool = byPattern[String(p.pattern_id)] || [];
+      var dueStr = p.due ? String(p.due).slice(0, 10) : '';
+      return {
+        pattern_id: p.pattern_id,
+        order_index: Number(p.order_index) || 0,
+        label: p.label,
+        title_ru: p.title_ru,
+        notes_slug: p.notes_slug,
+        state: String(p.state || 'new'),
+        due: dueStr,
+        is_due: String(p.state) !== 'new' && !!dueStr && dueStr <= today,
+        reps: Number(p.reps) || 0,
+        lapses: Number(p.lapses) || 0,
+        pool_size: pool.length
+      };
+    }),
+    pools: pools,
+    queue: queue.map(function (p) { return String(p.pattern_id); }),
+    counts: {
+      total: mine.length,
+      due: due.length,
+      new_available: fresh.length,
+      new_in_session: Math.min(fresh.length, newAllowance),
+      new_introduced_today: introducedToday,
+      new_allowance_left: newAllowance,
+      scheduled: later.length
+    }
+  };
+}
+
+/**
+ * rounds: [{ pattern_id, results: [{ item_id, correct, hint_used }], ts }]
+ *
+ * The client sends what happened, never a rating: the derivation lives here so
+ * there is exactly one copy of it. Answer checking stays on the client because
+ * that is where the immediate feedback has to be rendered anyway, and this is a
+ * single-user system — the deliberate trust boundary is written down in
+ * docs/spec-grammar.md rather than left implicit.
+ */
+function applyGrammarFlush(userId, batchId, rounds) {
+  if (!batchId) return { ok: false, code: 'BAD_REQUEST', message: 'batch_id is required' };
+  if (!rounds || !rounds.length) return { ok: true, applied: 0, skipped_duplicate: false };
+
+  if (flushSeen_(batchId)) return { ok: true, applied: 0, skipped_duplicate: true };
+
+  var settings = readSettings_();
+  var g = grammarSettings_(settings);
+  var today = todayStr_(g.tz);
+
+  var patterns = readPatterns_();
+  var byId = {};
+  patterns.forEach(function (p) { byId[String(p.pattern_id)] = p; });
+
+  var items = readGrammarItems_();
+  var itemById = {};
+  items.forEach(function (it) { itemById[String(it.item_id)] = it; });
+
+  var patternUpdates = {};
+  var itemUpdates = {};
+  var logRows = [];
+  var outcomes = [];
+  var applied = 0;
+
+  rounds.forEach(function (round) {
+    var p = byId[String(round.pattern_id)];
+    if (!p) return;
+    if (String(p.user_id) !== String(userId)) return;
+    var results = round.results || [];
+    if (!results.length) return;
+
+    var errors = 0;
+    var hints = 0;
+    results.forEach(function (r) {
+      if (!r.correct) errors++;
+      if (r.hint_used) hints++;
+      var it = itemById[String(r.item_id)];
+      if (!it) return;
+      // Serve counters drive pool rotation. Bumped on flush rather than on build,
+      // so an abandoned session does not burn through the pool.
+      itemUpdates[String(r.item_id)] = {
+        _row: it._row,
+        patch: {
+          serve_count: (Number(it.serve_count) || 0) + 1,
+          last_served: today
+        }
+      };
+    });
+
+    var rating = grammarRating_(errors, hints, results.length);
+    var elapsed = p.last_review ? daysBetween_(p.last_review, today) : 0;
+    var out = fsrsReview({
+      stability: p.stability === '' ? null : Number(p.stability),
+      difficulty: p.difficulty === '' ? null : Number(p.difficulty),
+      reps: Number(p.reps) || 0,
+      lapses: Number(p.lapses) || 0
+    }, rating, elapsed, { desiredRetention: g.retention });
+
+    var dueDate = new Date(new Date(today + 'T00:00:00Z').getTime() + out.intervalDays * 86400000);
+    var dueStr = Utilities.formatDate(dueDate, 'UTC', 'yyyy-MM-dd');
+
+    var patch = {
+      state: 'review', due: dueStr,
+      stability: out.stability, difficulty: out.difficulty,
+      reps: out.reps, lapses: out.lapses, last_review: today
+    };
+    if (!p.first_review) { patch.first_review = today; p.first_review = today; }
+
+    // A pattern reviewed twice in one session must chain, not overwrite: the
+    // second round has to start from the state the first one left behind.
+    p.stability = out.stability;
+    p.difficulty = out.difficulty;
+    p.reps = out.reps;
+    p.lapses = out.lapses;
+    p.last_review = today;
+    p.state = 'review';
+    p.due = dueStr;
+
+    patternUpdates[String(p.pattern_id)] = { _row: p._row, patch: patch };
+
+    logRows.push([p.pattern_id, round.ts || new Date().toISOString(), rating,
+      errors, hints, results.length, elapsed, out.intervalDays,
+      out.stability, out.difficulty, batchId]);
+
+    outcomes.push({
+      pattern_id: p.pattern_id,
+      label: p.label,
+      rating: rating,
+      errors: errors,
+      hints: hints,
+      items: results.length,
+      interval_days: out.intervalDays,
+      due: dueStr
+    });
+    applied++;
+  });
+
+  writePatternUpdates_(Object.keys(patternUpdates).map(function (k) { return patternUpdates[k]; }));
+  writeGrammarItemUpdates_(Object.keys(itemUpdates).map(function (k) { return itemUpdates[k]; }));
+  appendGrammarLog_(logRows);
+  flushRecord_(batchId, applied);
+
+  return { ok: true, applied: applied, skipped_duplicate: false, outcomes: outcomes };
+}
+
+// ==========================================================================
 // Import.gs
 // ==========================================================================
 
@@ -1035,6 +1467,391 @@ function rollbackBatch(batchId) {
   } finally {
     lock.releaseLock();
   }
+  return rows.length;
+}
+
+// ==========================================================================
+// GrammarImport.gs
+// ==========================================================================
+
+/**
+ * grammar_inbox -> patterns + grammar_items.
+ *
+ * The inbox is deliberately flat and denormalised: pattern metadata repeats on
+ * every row. That is what makes a generated TSV pasteable in one go, and the
+ * pattern row is created here on first sight rather than by hand.
+ *
+ * Structural validation only. Whether a typed answer counts as correct is decided
+ * on the client (app/answer.js) — see docs/spec-grammar.md for why the boundary
+ * sits there.
+ */
+
+var GRAMMAR_GAP = '___';
+
+function collapse_(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/[‘’]/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Structural comparison for the tokens/answer cross-check: case and punctuation off. */
+function bareText_(s) {
+  return collapse_(s).toLowerCase().replace(/[.,;:!?"()]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/** Identity of an exercise: pattern, kind, prompt shown, answer expected. */
+function grammarItemKey_(it) {
+  return [String(it.pattern_id), String(it.kind),
+    bareText_(it.stem), bareText_(it.tokens), bareText_(String(it.answer).split('||')[0])].join('|');
+}
+
+function firstAlternative_(answer) {
+  return collapse_(String(answer).split('||')[0]);
+}
+
+function validateGrammarRow_(row) {
+  var r = {};
+  GRAMMAR_IMPORT_COLUMNS.forEach(function (c, i) { r[c] = collapse_(row[i]); });
+
+  if (!r.pattern_id) return { error: 'pattern_id is empty' };
+  if (!/^[a-z0-9_]+$/.test(r.pattern_id)) {
+    return { error: 'pattern_id must be lower_snake_case, got "' + r.pattern_id + '"' };
+  }
+  if (!r.label) return { error: 'label is empty — it is the chip shown on every screen' };
+  if (!r.title_ru) return { error: 'title_ru is empty' };
+  var order = parseInt(r.order_index, 10);
+  if (isNaN(order) || order < 0) return { error: 'order_index must be a non-negative number' };
+  r.order_index = order;
+  if (!r.notes_slug) r.notes_slug = r.pattern_id;
+
+  if (VALID_KINDS.indexOf(r.kind) < 0) {
+    return { error: 'kind must be one of ' + VALID_KINDS.join('|') + ', got "' + r.kind + '"' };
+  }
+  if (!r.answer) return { error: 'answer is empty' };
+  // A hint that does not exist cannot explain anything, and an unexplained
+  // correction teaches the answer instead of the rule.
+  if (!r.hint_ru) return { error: 'hint_ru is empty — every item must be able to explain itself' };
+  if (r.answer.indexOf(GRAMMAR_GAP) >= 0) return { error: 'answer must not contain ' + GRAMMAR_GAP };
+
+  if (r.kind === 'scramble') {
+    if (!r.tokens) return { error: 'tokens are required for kind scramble' };
+    var toks = r.tokens.split('|').map(collapse_).filter(function (t) { return t.length > 0; });
+    if (toks.length < 3) {
+      return { error: 'scramble needs at least 3 tokens, got ' + toks.length };
+    }
+    // The cross-check that catches the mistake actually worth catching: tokens that
+    // do not assemble into the answer make the exercise unsolvable.
+    if (bareText_(toks.join(' ')) !== bareText_(firstAlternative_(r.answer))) {
+      return {
+        error: 'tokens do not assemble into answer: "' + toks.join(' ') +
+          '" vs "' + firstAlternative_(r.answer) + '"'
+      };
+    }
+    if (!r.prompt_ru) {
+      return { error: 'prompt_ru is required for scramble — without the meaning it is a word puzzle' };
+    }
+    r.tokens = toks.join('|');
+  } else {
+    if (!r.stem) return { error: 'stem is required for kind ' + r.kind };
+    if (r.tokens) return { error: 'tokens only apply to kind scramble' };
+  }
+
+  if (r.kind === 'gapfill') {
+    if (r.stem.indexOf(GRAMMAR_GAP) < 0) {
+      return { error: 'gapfill stem must contain the gap marker ' + GRAMMAR_GAP };
+    }
+  }
+  if (r.kind === 'transform' || r.kind === 'fix') {
+    if (bareText_(r.stem) === bareText_(firstAlternative_(r.answer))) {
+      return { error: 'stem and answer are identical — nothing to ' + r.kind };
+    }
+    if (r.kind === 'transform' && !r.prompt_ru) {
+      return { error: 'prompt_ru is required for transform — it names the target form' };
+    }
+  }
+
+  return { row: r };
+}
+
+function importGrammarInbox(userId) {
+  var sh = sheet_(SHEET_GRAMMAR_INBOX);
+  var lastRow = sh.getLastRow();
+  if (lastRow < 2) {
+    return { accepted: 0, rejected: 0, duplicates: 0, patterns_created: 0, message: 'grammar_inbox is empty' };
+  }
+
+  var raw = sh.getRange(2, 1, lastRow - 1, GRAMMAR_IMPORT_COLUMNS.length).getValues();
+
+  var patterns = readPatterns_();
+  var patternById = {};
+  patterns.forEach(function (p) { patternById[String(p.pattern_id)] = p; });
+
+  // The dedupe key has to include the stem, not only the answer: two different
+  // gap-fills inside one pattern legitimately share a one-word answer like "the",
+  // and keying on the answer alone threw the second one away as a duplicate.
+  var existing = {};
+  readGrammarItems_().forEach(function (it) { existing[grammarItemKey_(it)] = true; });
+
+  var batch = makeId_('gimp');
+  var now = new Date().toISOString();
+  var itemRows = [];
+  var patternRows = [];
+  var newPatterns = {};
+  var rejects = [];
+  var duplicates = 0;
+  var seenInBatch = {};
+
+  for (var i = 0; i < raw.length; i++) {
+    var lineNo = i + 2;
+    if (!collapse_(raw[i][0]) && !collapse_(raw[i][8])) continue;      // blank line
+
+    var v = validateGrammarRow_(raw[i]);
+    if (v.error) {
+      rejects.push([lineNo, v.error, now].concat(raw[i]));
+      continue;
+    }
+    var r = v.row;
+    var key = grammarItemKey_(r);
+    if (existing[key] || seenInBatch[key]) {
+      duplicates++;
+      rejects.push([lineNo, 'duplicate of an existing item', now].concat(raw[i]));
+      continue;
+    }
+    seenInBatch[key] = true;
+
+    if (!patternById[r.pattern_id] && !newPatterns[r.pattern_id]) {
+      var pvalues = {
+        pattern_id: r.pattern_id, order_index: r.order_index, label: r.label,
+        title_ru: r.title_ru, notes_slug: r.notes_slug,
+        state: 'new', due: '', stability: '', difficulty: '', reps: 0, lapses: 0,
+        last_review: '', first_review: '', created_at: now,
+        user_id: userId, source_batch: batch
+      };
+      var prow = [];
+      PATTERN_COLUMNS.forEach(function (c) { prow.push(pvalues[c]); });
+      patternRows.push(prow);
+      newPatterns[r.pattern_id] = true;
+    }
+
+    var ivalues = {
+      item_id: makeId_('gi'), pattern_id: r.pattern_id, kind: r.kind,
+      prompt_ru: r.prompt_ru, stem: r.stem, answer: r.answer, tokens: r.tokens,
+      hint_ru: r.hint_ru, serve_count: 0, last_served: '',
+      created_at: now, source_batch: batch
+    };
+    var irow = [];
+    GRAMMAR_ITEM_COLUMNS.forEach(function (c) { irow.push(ivalues[c]); });
+    itemRows.push(irow);
+  }
+
+  if (patternRows.length) appendRows_(SHEET_PATTERNS, PATTERN_COLUMNS, patternRows);
+  if (itemRows.length) appendRows_(SHEET_GRAMMAR_ITEMS, GRAMMAR_ITEM_COLUMNS, itemRows);
+
+  if (rejects.length) {
+    var rj = sheet_(SHEET_GRAMMAR_REJECTS);
+    var width = 3 + GRAMMAR_IMPORT_COLUMNS.length;
+    var padded = rejects.map(function (x) {
+      while (x.length < width) x.push('');
+      return x.slice(0, width);
+    });
+    rj.getRange(rj.getLastRow() + 1, 1, padded.length, width).setValues(padded);
+  }
+
+  sh.getRange(2, 1, lastRow - 1, GRAMMAR_IMPORT_COLUMNS.length).clearContent();
+
+  return {
+    accepted: itemRows.length,
+    patterns_created: patternRows.length,
+    rejected: rejects.length - duplicates,
+    duplicates: duplicates,
+    batch: batch
+  };
+}
+
+/** Removes every pattern and item from one grammar import batch. */
+function rollbackGrammarBatch(batchId) {
+  var removed = { items: 0, patterns: 0 };
+  [[SHEET_GRAMMAR_ITEMS, readGrammarItems_(), 'items'],
+   [SHEET_PATTERNS, readPatterns_(), 'patterns']].forEach(function (spec) {
+    var sh = sheet_(spec[0]);
+    var rows = spec[1].filter(function (x) { return String(x.source_batch) === String(batchId); })
+      .map(function (x) { return x._row; })
+      .sort(function (a, b) { return b - a; });
+    var lock = LockService.getScriptLock();
+    if (!lock.tryLock(30000)) throw new Error('LOCKED');
+    try {
+      rows.forEach(function (r) { sh.deleteRow(r); });
+    } finally {
+      lock.releaseLock();
+    }
+    removed[spec[2]] = rows.length;
+  });
+  return removed;
+}
+
+// ==========================================================================
+// GrammarSeed.gs
+// ==========================================================================
+
+/**
+ * The first grammar corpus: eight patterns, twelve items each, four exercise kinds.
+ *
+ * Which eight, and why these: not the textbook order. Russian has three tenses and
+ * two aspects against twelve English forms, so the forms that cost a Russian speaker
+ * the most are the perfect, the progressive, the copula `to be` (absent in the Russian
+ * present), do-support in questions, and articles. Present Simple in the third person
+ * is here for one reason only — the `-s` that keeps disappearing.
+ *
+ * Sentences come from kicksharing, hotel PMS and analyst work on purpose: grammar
+ * drilled on sentences you would actually say at work pays twice.
+ *
+ * Columns: pattern_id, order_index, label, title_ru, notes_slug,
+ *          kind, prompt_ru, stem, answer, tokens, hint_ru
+ */
+function grammarSeedRows_() {
+  var P1 = ['to_be_present', 10, 'Present Simple · to be', 'Глагол «быть» в настоящем', 'to-be-present'];
+  var P2 = ['present_simple_3sg', 20, 'Present Simple', 'Третье лицо: окончание -s', 'present-simple-3sg'];
+  var P3 = ['present_vs_continuous', 30, 'Present Simple / Continuous', 'Вообще или прямо сейчас', 'present-vs-continuous'];
+  var P4 = ['present_perfect_since_for', 40, 'Present Perfect', 'since / for: началось в прошлом, длится сейчас', 'present-perfect-since-for'];
+  var P5 = ['present_perfect_vs_past', 50, 'Present Perfect / Past Simple', 'Результат сейчас или факт в прошлом', 'present-perfect-vs-past'];
+  var P6 = ['questions_do_support', 60, 'Questions', 'Порядок слов и вспомогательный глагол', 'questions-do-support'];
+  var P7 = ['past_simple_vs_continuous', 70, 'Past Simple / Past Continuous', 'Фон и то, что его прервало', 'past-simple-vs-continuous'];
+  var P8 = ['articles_basic', 80, 'Articles', 'a / an / the и когда артикля нет', 'articles-basic'];
+
+  var data = [
+    /* --- to be в настоящем: русский обходится без связки, английский нет --- */
+    [P1, 'scramble', 'Я продакт-маркетинг лид.', '', 'I am a product marketing lead.', 'I|am|a|product|marketing|lead', 'В русском «Я — лид» глагола нет вообще. В английском `am` обязателен: без него предложение не существует.'],
+    [P1, 'scramble', 'Утилизация парка сегодня низкая.', '', 'Fleet utilization is low today.', 'Fleet|utilization|is|low|today', 'Подлежащее в третьем лице единственного числа берёт `is`.'],
+    [P1, 'scramble', 'Мы не готовы к запуску в Бразилии.', '', 'We are not ready for the Brazil launch.', 'We|are|not|ready|for|the|Brazil|launch', 'Отрицание строится вставкой `not` после формы `to be`. Вспомогательный `do` здесь не нужен.'],
+    [P1, 'gapfill', '', 'The rate plan ___ different on weekends.', 'is', '', '`The rate plan` — третье лицо единственного числа, значит `is`.'],
+    [P1, 'gapfill', '', 'I ___ a business analyst at Libra Hospitality.', 'am', '', 'С `I` всегда `am`. Ни `is`, ни `are`.'],
+    [P1, 'gapfill', '', 'The scooters ___ not available in this zone.', 'are', '', '`Scooters` — множественное число, значит `are`. Отрицание: `are not`.'],
+    [P1, 'transform', '→ отрицание', 'The integration is ready.', "The integration is not ready.||The integration isn't ready.", '', 'Форма `to be` отрицается сама: `is not`. Добавлять `does not` — типичный перенос с обычных глаголов.'],
+    [P1, 'transform', '→ вопрос', 'The report is correct.', 'Is the report correct?', '', 'Вопрос с `to be` — простая инверсия: форма глагола встаёт перед подлежащим, ничего не добавляется.'],
+    [P1, 'transform', '→ подлежащее во множественном числе', 'The vehicle is idle.', 'The vehicles are idle.', '', 'Форма `to be` согласуется с подлежащим: `vehicle is` → `vehicles are`.'],
+    [P1, 'fix', '', 'I product marketing lead at JET Sharing.', 'I am a product marketing lead at JET Sharing.', '', 'Пропущен `am` — калька с русского «Я лид». Плюс перед профессией нужен артикль `a`.'],
+    [P1, 'fix', '', 'The guest folio are empty.', 'The guest folio is empty.', '', '`Folio` — единственное число, значит `is`, а не `are`.'],
+    [P1, 'fix', '', 'She not in the office today.', "She is not in the office today.||She isn't in the office today.", '', 'Отрицание без формы `to be` невозможно: нужно `is not`.'],
+
+    /* --- третье лицо и его -s --- */
+    [P2, 'scramble', 'Система синхронизирует номерной фонд каждый час.', '', 'The system syncs room inventory every hour.', 'The|system|syncs|room|inventory|every|hour', '`The system` — третье лицо единственного числа, значит `syncs` с окончанием `-s`.'],
+    [P2, 'scramble', 'Тарифный план меняется на выходных.', '', 'The rate plan changes on weekends.', 'The|rate|plan|changes|on|weekends', 'Регулярное действие идёт в Present Simple. Третье лицо → `changes`.'],
+    [P2, 'scramble', 'Я собираю требования у трёх групп стейкхолдеров.', '', 'I gather requirements from three stakeholder groups.', 'I|gather|requirements|from|three|stakeholder|groups', 'С `I` окончания нет: `gather`, а не `gathers`.'],
+    [P2, 'gapfill', '', 'The nightly job ___ (run) at three in the morning.', 'runs', '', 'Третье лицо единственного числа в Present Simple получает `-s`.'],
+    [P2, 'gapfill', '', 'Our users ___ (open) the app twice a day on average.', 'open', '', '`Users` — множественное число, окончания нет.'],
+    [P2, 'gapfill', '', 'The channel manager ___ (push) rates to every OTA.', 'pushes', '', 'После `-ch`, `-sh`, `-s`, `-x` добавляется `-es`: `push` → `pushes`.'],
+    [P2, 'transform', '→ подлежащее `the analyst`', 'I document every business rule.', 'The analyst documents every business rule.', '', 'Смена подлежащего на третье лицо единственного числа требует `-s` у глагола.'],
+    [P2, 'transform', '→ отрицание', 'The scooter reports its battery level.', "The scooter does not report its battery level.||The scooter doesn't report its battery level.", '', 'В отрицании `-s` уходит к вспомогательному: `does not report`, а не `does not reports`.'],
+    [P2, 'transform', '→ вопрос', 'The integration sends data to the PMS.', 'Does the integration send data to the PMS?', '', 'В вопросе `-s` переезжает в `does`, а смысловой глагол остаётся в базовой форме.'],
+    [P2, 'fix', '', 'The dashboard show fleet utilization by city.', 'The dashboard shows fleet utilization by city.', '', '`The dashboard` — третье лицо единственного числа, нужно `shows`.'],
+    [P2, 'fix', '', "He doesn't knows the attribution window.", "He doesn't know the attribution window.", '', 'После `doesn’t` идёт базовая форма. Двух `-s` в одном отрицании не бывает.'],
+    [P2, 'fix', '', 'Do the system support multiple currencies?', 'Does the system support multiple currencies?', '', '`The system` — третье лицо единственного числа, значит вопрос начинается с `Does`.'],
+
+    /* --- Simple против Continuous: русский вид не подсказывает --- */
+    [P3, 'scramble', 'Мы прямо сейчас выкатываем новый тариф.', '', 'We are rolling out a new rate plan right now.', 'We|are|rolling|out|a|new|rate|plan|right|now', '`right now` — действие в моменте, значит Continuous: `are rolling out`.'],
+    [P3, 'scramble', 'Обычно мы выкатываем изменения по вторникам.', '', 'We usually roll out changes on Tuesdays.', 'We|usually|roll|out|changes|on|Tuesdays', '`usually` — регулярность, значит Present Simple без `-ing`.'],
+    [P3, 'scramble', 'Утилизация падает уже третью неделю.', '', 'Utilization is falling for the third week.', 'Utilization|is|falling|for|the|third|week', 'Процесс в развитии → Continuous. В русском вид спрятан в слове «падает», в английском его несёт форма `is falling`.'],
+    [P3, 'gapfill', '', 'I ___ (work) on the Brazil launch this month.', 'am working', '', '`this month` — ограниченный текущий период, значит Continuous.'],
+    [P3, 'gapfill', '', 'The PMS ___ (store) every guest folio.', 'stores', '', 'Постоянное свойство системы идёт в Present Simple, не в Continuous.'],
+    [P3, 'gapfill', '', 'Look at the map — three scooters ___ (move) toward the same zone.', 'are moving', '', '`Look at` указывает на момент наблюдения, значит Continuous.'],
+    [P3, 'transform', '→ Present Continuous', 'I review the requirements.', "I am reviewing the requirements.||I'm reviewing the requirements.", '', 'Continuous — это форма `to be` плюс `-ing`. С `I` получается `am reviewing`.'],
+    [P3, 'transform', '→ Present Simple', 'We are checking utilization every morning.', 'We check utilization every morning.', '', '`every morning` — регулярность, а регулярность идёт в Simple, даже если само действие длительное.'],
+    [P3, 'transform', '→ вопрос', 'She is preparing the release notes.', 'Is she preparing the release notes?', '', 'В Continuous вопрос делается инверсией формы `to be`, `-ing` не трогаем.'],
+    [P3, 'fix', '', 'I am knowing this integration well.', 'I know this integration well.', '', 'Глаголы состояния — `know`, `understand`, `want` — в Continuous не ставятся.'],
+    [P3, 'fix', '', 'Right now we discuss the scope.', "Right now we are discussing the scope.||Right now we're discussing the scope.", '', '`Right now` требует Continuous. В русском форма одна, в английском выбор обязателен.'],
+    [P3, 'fix', '', 'Our users are opening the app twice a day.', 'Our users open the app twice a day.', '', '`twice a day` — привычка, а привычки идут в Simple.'],
+
+    /* --- Present Perfect с since/for: русское настоящее время сбивает --- */
+    [P4, 'scramble', 'Я работаю в JET Sharing с 2023 года.', '', 'I have worked at JET Sharing since 2023.', 'I|have|worked|at|JET|Sharing|since|2023', 'Началось в прошлом и длится сейчас → Present Perfect. В русском здесь настоящее время, и это главная ловушка.'],
+    [P4, 'scramble', 'Мы используем это окно атрибуции уже два года.', '', 'We have used this attribution window for two years.', 'We|have|used|this|attribution|window|for|two|years', '`for two years` — длительность до настоящего момента, значит `have used`, а не `use`.'],
+    [P4, 'scramble', 'Она отвечает за миграцию с апреля.', '', 'She has owned the migration since April.', 'She|has|owned|the|migration|since|April', 'Третье лицо единственного числа в Present Perfect берёт `has`, а не `have`.'],
+    [P4, 'gapfill', '', 'I ___ (be) a business analyst since 2021.', 'have been', '', '`since 2021` требует Present Perfect. Третья форма от `be` — `been`.'],
+    [P4, 'gapfill', '', 'The channel manager ___ (work) without errors for three months.', 'has worked', '', '`The channel manager` — третье лицо единственного числа, значит `has`.'],
+    [P4, 'gapfill', '', 'We ___ (not / see) this edge case since the last release.', "have not seen||haven't seen", '', 'В Present Perfect `not` встаёт между `have` и третьей формой.'],
+    [P4, 'transform', '→ Present Perfect с since', 'I started working here in 2023.', "I have worked here since 2023.||I've worked here since 2023.", '', 'Past Simple сообщает только момент начала. Present Perfect с `since` добавляет, что это длится и сейчас.'],
+    [P4, 'transform', '→ вопрос', 'You have used this rate plan for a year.', 'Have you used this rate plan for a year?', '', 'Вопрос — инверсия `have` и подлежащего, третья форма остаётся на месте.'],
+    [P4, 'transform', '→ подлежащее `the team`', 'I have owned this integration since March.', 'The team has owned this integration since March.', '', '`The team` — третье лицо единственного числа, значит `has owned`.'],
+    [P4, 'fix', '', 'I work at JET Sharing since 2023.', "I have worked at JET Sharing since 2023.||I've worked at JET Sharing since 2023.", '', 'Present Simple с `since` невозможен. Русское «работаю с 2023» переводится Present Perfect.'],
+    [P4, 'fix', '', 'We have used this window since two years.', 'We have used this window for two years.', '', '`since` — точка отсчёта (2023, April), `for` — длительность (two years).'],
+    [P4, 'fix', '', 'She have owned the migration since April.', 'She has owned the migration since April.', '', 'С `she` идёт `has`, а не `have`.'],
+
+    /* --- Present Perfect против Past Simple: та самая ошибка --- */
+    [P5, 'scramble', 'Мы уже выкатили эту функциональность.', '', 'We have already rolled out this feature.', 'We|have|already|rolled|out|this|feature', '`already` без указания когда — важен результат сейчас, значит Present Perfect.'],
+    [P5, 'scramble', 'Мы выкатили её на прошлой неделе.', '', 'We rolled it out last week.', 'We|rolled|it|out|last|week', '`last week` — законченный момент в прошлом, значит Past Simple. С `last week` Present Perfect невозможен.'],
+    [P5, 'scramble', 'Я ещё не видел этот отчёт.', '', "I have not seen this report yet.||I haven't seen this report yet.", 'I|have|not|seen|this|report|yet', '`yet` говорит о текущем положении дел, значит Present Perfect.'],
+    [P5, 'gapfill', '', '___ (you / read) the spec yet?', 'Have you read', '', '`yet` требует Present Perfect: спрашивают про состояние на сейчас, а не про момент в прошлом.'],
+    [P5, 'gapfill', '', 'I ___ (send) the requirements yesterday.', 'sent', '', '`yesterday` — конкретный момент в прошлом, значит Past Simple.'],
+    [P5, 'gapfill', '', 'Utilization ___ (drop) three times this month.', 'has dropped', '', '`this month` — период ещё не закончился, значит Present Perfect.'],
+    [P5, 'transform', '→ Past Simple, добавь `in April`', 'We have changed the rate plan.', 'We changed the rate plan in April.', '', 'Появилось указание момента — Present Perfect больше нельзя, фраза уходит в Past Simple.'],
+    [P5, 'transform', '→ Present Perfect', 'I finished the analysis.', "I have finished the analysis.||I've finished the analysis.", '', 'Убираем привязку к моменту — остаётся результат, который важен сейчас.'],
+    [P5, 'transform', '→ отрицание', 'She has approved the scope.', "She has not approved the scope.||She hasn't approved the scope.", '', '`not` встаёт после `has`, третья форма не меняется.'],
+    [P5, 'fix', '', 'I have sent the report yesterday.', 'I sent the report yesterday.', '', '`yesterday` и Present Perfect несовместимы: конкретный момент требует Past Simple.'],
+    [P5, 'fix', '', 'Did you read the spec yet?', 'Have you read the spec yet?', '', '`yet` — про сейчас, значит Present Perfect, а не Past Simple.'],
+    [P5, 'fix', '', 'We already rolled out the fix, so the bug is gone.', "We have already rolled out the fix, so the bug is gone.||We've already rolled out the fix, so the bug is gone.", '', 'Результат действует сейчас — `the bug is gone` — значит Present Perfect.'],
+
+    /* --- вопросы: в русском нет do-support, поэтому его забывают --- */
+    [P6, 'scramble', 'Как часто система синхронизирует тарифы?', '', 'How often does the system sync rates?', 'How|often|does|the|system|sync|rates', 'После вопросительного слова идёт вспомогательный `does`, затем подлежащее, затем глагол в базовой форме.'],
+    [P6, 'scramble', 'Почему упала утилизация парка?', '', 'Why did fleet utilization drop?', 'Why|did|fleet|utilization|drop', 'Прошедшее время в вопросе берёт `did`, а смысловой глагол остаётся базовым: `drop`, не `dropped`.'],
+    [P6, 'scramble', 'Кто отвечает за эту интеграцию?', '', 'Who owns this integration?', 'Who|owns|this|integration', 'Когда вопрос задан к подлежащему, `do/does` не нужен и порядок слов остаётся прямым.'],
+    [P6, 'gapfill', '', '___ the guest folio include the city tax?', 'Does', '', '`The guest folio` — третье лицо единственного числа в настоящем, значит `Does`.'],
+    [P6, 'gapfill', '', 'Where ___ you gather these requirements?', 'did', '', 'Прошедшее время требует `did`, глагол дальше идёт в базовой форме.'],
+    [P6, 'gapfill', '', '___ the scooters need a firmware update?', 'Do', '', '`Scooters` — множественное число, значит `Do`.'],
+    [P6, 'transform', '→ вопрос', 'The analyst documents every business rule.', 'Does the analyst document every business rule?', '', '`-s` переезжает в `does`, и смысловой глагол теряет окончание.'],
+    [P6, 'transform', '→ вопрос', 'They launched in Baku last spring.', 'Did they launch in Baku last spring?', '', 'Прошедшее время уходит в `did`, а `launched` становится `launch`.'],
+    [P6, 'transform', '→ вопрос со `what` к дополнению', 'She reviewed the migration plan.', 'What did she review?', '', 'Вопрос к дополнению требует `did` и базовой формы: `did she review`.'],
+    [P6, 'fix', '', 'Why the utilization dropped last week?', 'Why did the utilization drop last week?', '', 'В английском вопросе нельзя обойтись интонацией: нужен `did` и базовая форма глагола.'],
+    [P6, 'fix', '', 'Does the system supports two currencies?', 'Does the system support two currencies?', '', 'После `does` глагол всегда базовый, без `-s`.'],
+    [P6, 'fix', '', 'What you think about this scope?', 'What do you think about this scope?', '', 'Пропущен вспомогательный `do`. Русское «Что ты думаешь» строится без него, английское — нет.'],
+
+    /* --- прошедшее: фон и событие --- */
+    [P7, 'scramble', 'Когда упал сервер, я готовил отчёт.', '', 'I was preparing the report when the server went down.', 'I|was|preparing|the|report|when|the|server|went|down', 'Длинный фон идёт в Past Continuous — `was preparing`, а короткое событие внутри него в Past Simple — `went down`.'],
+    [P7, 'scramble', 'Пока мы согласовывали объём, срок сдвинулся.', '', 'While we were aligning on scope, the deadline moved.', 'While|we|were|aligning|on|scope|the|deadline|moved', '`While` вводит фон, значит Past Continuous. Событие в главной части — Past Simple.'],
+    [P7, 'scramble', 'Я проверил счёт гостя и нашёл ошибку.', '', 'I checked the guest folio and found an error.', 'I|checked|the|guest|folio|and|found|an|error', 'Два законченных действия друг за другом — оба в Past Simple, Continuous здесь не нужен.'],
+    [P7, 'gapfill', '', 'I ___ (prepare) the report when the server went down.', 'was preparing', '', 'Фон, который уже шёл к моменту события, идёт в Past Continuous.'],
+    [P7, 'gapfill', '', 'While the job ___ (run), we watched the logs.', 'was running', '', '`While` вводит длящийся фон, значит Past Continuous.'],
+    [P7, 'gapfill', '', 'The deadline ___ (move) twice last quarter.', 'moved', '', 'Законченный факт с указанием периода идёт в Past Simple.'],
+    [P7, 'transform', '→ Past Continuous', 'I reviewed the spec at nine.', 'I was reviewing the spec at nine.', '', 'Past Continuous говорит, что в девять процесс уже шёл, а не начался и закончился.'],
+    [P7, 'transform', '→ Past Simple', 'She was writing the release notes.', 'She wrote the release notes.', '', 'Past Simple подаёт действие как законченный факт, без взгляда изнутри процесса.'],
+    [P7, 'transform', '→ вопрос', 'They were rebalancing idle vehicles.', 'Were they rebalancing idle vehicles?', '', 'Вопрос в Continuous — инверсия `was/were` и подлежащего.'],
+    [P7, 'fix', '', 'I was checking the folio and was finding an error.', 'I checked the folio and found an error.', '', 'Два коротких завершённых действия идут в Past Simple. Continuous растягивает то, что мгновенно.'],
+    [P7, 'fix', '', 'While we were align on scope, the deadline moved.', 'While we were aligning on scope, the deadline moved.', '', 'После `were` нужна форма на `-ing`: `were aligning`.'],
+    [P7, 'fix', '', 'They was testing the integration all morning.', 'They were testing the integration all morning.', '', '`They` — множественное число, значит `were`, а не `was`.'],
+
+    /* --- артикли: в русском их нет вообще --- */
+    [P8, 'scramble', 'Я продакт-менеджер в кикшеринговой компании.', '', 'I am a product manager at a kicksharing company.', 'I|am|a|product|manager|at|a|kicksharing|company', 'И профессия, и неопределённая компания требуют `a`: называем один экземпляр из класса, а не конкретный.'],
+    [P8, 'scramble', 'Отчёт, который я отправил вчера, был неверный.', '', 'The report I sent yesterday was wrong.', 'The|report|I|sent|yesterday|was|wrong', 'Отчёт конкретный и уже определён контекстом, значит `the`.'],
+    [P8, 'scramble', 'Утилизация парка важнее выручки.', '', 'Fleet utilization matters more than revenue.', 'Fleet|utilization|matters|more|than|revenue', 'Неисчисляемые понятия в общем смысле идут без артикля вообще.'],
+    [P8, 'gapfill', '', 'We found ___ edge case that breaks the nightly job.', 'an', '', 'Первое упоминание, один из многих — неопределённый артикль. Перед гласным звуком `an`.'],
+    [P8, 'gapfill', '', '___ channel manager pushes rates to every OTA.', 'The', '', 'Речь о конкретной, уже известной системе, значит `the`.'],
+    [P8, 'gapfill', '', 'The bug appeared after ___ last release.', 'the', '', '`last release` — единственный конкретный релиз, значит `the`.'],
+    [P8, 'transform', '→ первое упоминание аналитика', 'The analyst joined the team.', 'An analyst joined the team.', '', 'Если аналитик упомянут впервые и не важно кто именно — `an`. Команда при этом остаётся конкретной.'],
+    [P8, 'transform', '→ множественное число, общий смысл', 'A scooter needs a daily check.', 'Scooters need a daily check.', '', 'Общее утверждение о классе во множественном числе идёт без артикля.'],
+    [P8, 'transform', '→ речь о конкретном плане', 'We reviewed a rate plan.', 'We reviewed the rate plan.', '', '`the` показывает, что план один и обеим сторонам известно какой.'],
+    [P8, 'fix', '', 'I am product manager at JET Sharing.', 'I am a product manager at JET Sharing.', '', 'Перед профессией в единственном числе нужен `a`. Русский обходится без артикля, английский — нет.'],
+    [P8, 'fix', '', 'The fleet utilization is a key metric for the kicksharing.', 'Fleet utilization is a key metric for kicksharing.', '', 'Абстрактные понятия в общем смысле идут без артикля: ни `the fleet utilization`, ни `the kicksharing`.'],
+    [P8, 'fix', '', 'We found a edge case in the import.', 'We found an edge case in the import.', '', 'Перед гласным звуком идёт `an`, а не `a`.']
+  ];
+
+  return data.map(function (d) {
+    var p = d[0];
+    // pattern_id, order_index, label, title_ru, notes_slug, kind, prompt_ru, stem, answer, tokens, hint_ru
+    return [p[0], p[1], p[2], p[3], p[4], d[1], d[2], d[3], d[4], d[5], d[6]];
+  });
+}
+
+/**
+ * Writes the corpus into grammar_inbox. Deliberately not written straight into
+ * grammar_items: routing it through the inbox means the seed is validated by the
+ * same importer as any generated batch, so a broken item here fails loudly instead
+ * of quietly becoming an unsolvable exercise.
+ */
+function seedGrammarBatch() {
+  var rows = grammarSeedRows_();
+  var sh = sheet_(SHEET_GRAMMAR_INBOX);
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, GRAMMAR_IMPORT_COLUMNS.length).setValues(rows);
+  Logger.log('grammar_inbox: залито строк — ' + rows.length);
+  Logger.log('Теперь запусти runImportGrammar (или пункт меню «Импортировать грамматику»).');
   return rows.length;
 }
 
@@ -1230,6 +2047,13 @@ function setupSpreadsheet() {
   ensureTab_(ss, SHEET_FLUSH_LOG, ['batch_id', 'received_at', 'count']);
   ensureTab_(ss, logSheetName_(), LOG_COLUMNS);
 
+  ensureTab_(ss, SHEET_PATTERNS, PATTERN_COLUMNS);
+  ensureTab_(ss, SHEET_GRAMMAR_ITEMS, GRAMMAR_ITEM_COLUMNS);
+  ensureTab_(ss, SHEET_GRAMMAR_INBOX, GRAMMAR_IMPORT_COLUMNS);
+  ensureTab_(ss, SHEET_GRAMMAR_REJECTS,
+    ['inbox_line', 'reason', 'ts'].concat(GRAMMAR_IMPORT_COLUMNS));
+  ensureTab_(ss, grammarLogSheetName_(), GRAMMAR_LOG_COLUMNS);
+
   var existing = readSettings_();
   var seeded = 0;
   Object.keys(DEFAULT_SETTINGS).forEach(function (k) {
@@ -1246,6 +2070,10 @@ function setupSpreadsheet() {
     SpreadsheetApp.newDataValidation().requireValueInList(VALID_TYPES, true).build());
   inbox.getRange(2, 6, 500, 1).setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInList(VALID_LAYERS, true).build());
+
+  var ginbox = ss.getSheetByName(SHEET_GRAMMAR_INBOX);
+  ginbox.getRange(2, GRAMMAR_IMPORT_COLUMNS.indexOf('kind') + 1, 500, 1).setDataValidation(
+    SpreadsheetApp.newDataValidation().requireValueInList(VALID_KINDS, true).build());
 
   Logger.log('setup done. settings seeded: ' + seeded);
   Logger.log('tabs: ' + ss.getSheets().map(function (s) { return s.getName(); }).join(', '));
@@ -1343,12 +2171,14 @@ function onOpenMenu(e) {
   SpreadsheetApp.getUi()
     .createMenu('Eng_bot')
     .addItem('Импортировать батч из inbox', 'menuImport')
+    .addItem('Импортировать грамматику из grammar_inbox', 'menuImportGrammar')
     .addSeparator()
     .addItem('Отправить тестовый пинг', 'menuTestPing')
     .addItem('Проверить webhook', 'menuCheckWebhook')
     .addSeparator()
     .addItem('Первичная настройка листов', 'setupSpreadsheet')
     .addItem('Засеять стартовый батч', 'seedStarterBatch')
+    .addItem('Засеять грамматику', 'seedGrammarBatch')
     .addItem('Самопроверка конфигурации', 'menuSelfCheck')
     .addToUi();
 }
@@ -1375,6 +2205,36 @@ function runImport() {
   }
   if (report.message) Logger.log(report.message);
   return report;
+}
+
+/** Импорт грамматики из grammar_inbox. Запускай из редактора. */
+function runImportGrammar() {
+  var report = importGrammarInbox(cfgAllowlist_()[0]);
+  Logger.log('Принято заданий: ' + (report.accepted || 0));
+  Logger.log('Создано шаблонов: ' + (report.patterns_created || 0));
+  Logger.log('Отклонено: ' + (report.rejected || 0));
+  Logger.log('Дубликатов: ' + (report.duplicates || 0));
+  if (report.batch) Logger.log('Батч: ' + report.batch);
+  if ((report.rejected || 0) + (report.duplicates || 0) > 0) {
+    Logger.log('Причины построчно — на листе "' + SHEET_GRAMMAR_REJECTS + '"');
+  }
+  if (report.message) Logger.log(report.message);
+  return report;
+}
+
+/** Состояние грамматики по данным. Запускай из редактора. */
+function runGrammarStats() {
+  var s = buildGrammarSession(cfgAllowlist_()[0]);
+  Logger.log('Шаблонов всего: ' + s.counts.total);
+  Logger.log('К повторению сейчас: ' + s.counts.due);
+  Logger.log('Новых в запасе: ' + s.counts.new_available);
+  Logger.log('Введено сегодня: ' + s.counts.new_introduced_today);
+  Logger.log('В очереди на сегодня: ' + s.queue.length);
+  s.patterns.forEach(function (p) {
+    Logger.log('  ' + p.label + ' · ' + p.title_ru + ' — ' + p.state +
+      (p.due ? ', до ' + p.due : '') + ', заданий в пуле: ' + p.pool_size);
+  });
+  return s.counts;
 }
 
 /** Тестовый пинг в Telegram. Запускай из редактора. */
@@ -1444,6 +2304,26 @@ function menuSelfCheck() {
   ui.alert('Готово', 'Результат в журнале выполнения (Ctrl+Enter).', ui.ButtonSet.OK);
 }
 
+function menuImportGrammar() {
+  var ui = SpreadsheetApp.getUi();
+  try {
+    var report = runImportGrammar();
+    var lines = [
+      'Принято заданий: ' + (report.accepted || 0),
+      'Создано шаблонов: ' + (report.patterns_created || 0),
+      'Отклонено: ' + (report.rejected || 0),
+      'Дубликатов: ' + (report.duplicates || 0)
+    ];
+    if (report.batch) lines.push('', 'Батч: ' + report.batch);
+    if ((report.rejected || 0) + (report.duplicates || 0) > 0) {
+      lines.push('Причины построчно — на листе "' + SHEET_GRAMMAR_REJECTS + '".');
+    }
+    ui.alert('Импорт грамматики', lines.join('\n'), ui.ButtonSet.OK);
+  } catch (e) {
+    ui.alert('Импорт грамматики не выполнен', String(e.message), ui.ButtonSet.OK);
+  }
+}
+
 // ==========================================================================
 // Main.gs
 // ==========================================================================
@@ -1471,11 +2351,14 @@ function doGet(e) {
     var action = e && e.parameter ? e.parameter.action : null;
     if (action === 'ping') return json_({ ok: true, pong: new Date().toISOString() });
     if (action === 'diag') return json_(diagInitData(e.parameter.initData));
-    if (action !== 'session') return fail_('BAD_REQUEST', 'unknown action: ' + action);
+    if (action !== 'session' && action !== 'grammar') {
+      return fail_('BAD_REQUEST', 'unknown action: ' + action);
+    }
 
     var auth = verifyInitData(e.parameter.initData);
     if (!auth.ok) return fail_(auth.code);
 
+    if (action === 'grammar') return json_(buildGrammarSession(auth.userId));
     return json_(buildSession(auth.userId));
   } catch (err) {
     Logger.log('doGet: ' + err.stack);
@@ -1498,11 +2381,16 @@ function doPost(e) {
       return json_({ ok: true });
     }
 
-    if (payload.action !== 'flush') return fail_('BAD_REQUEST', 'unknown action');
+    if (payload.action !== 'flush' && payload.action !== 'grammar_flush') {
+      return fail_('BAD_REQUEST', 'unknown action');
+    }
 
     var auth = verifyInitData(payload.initData);
     if (!auth.ok) return fail_(auth.code);
 
+    if (payload.action === 'grammar_flush') {
+      return json_(applyGrammarFlush(auth.userId, payload.batch_id, payload.rounds));
+    }
     return json_(applyFlush(auth.userId, payload.batch_id, payload.reviews));
   } catch (err) {
     Logger.log('doPost: ' + err.stack);

@@ -8,6 +8,12 @@
   var K_BUFFER = 'engbot.buffer.v1';
   var K_BATCH = 'engbot.batch.v1';
   var K_META = 'engbot.meta.v1';
+  // Grammar keeps its own buffer and batch id: a pending vocabulary flush and a
+  // pending grammar flush must never end up in the same batch, or one server-side
+  // duplicate check would silently swallow the other.
+  var K_GQUEUE = 'engbot.gqueue.v1';
+  var K_GBUFFER = 'engbot.gbuffer.v1';
+  var K_GBATCH = 'engbot.gbatch.v1';
 
   function read(key, fallback) {
     try {
@@ -42,6 +48,28 @@
       if (!id) {
         id = 'b_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
         write(K_BATCH, id);
+      }
+      return id;
+    },
+
+    getGrammarQueue: function () { return read(K_GQUEUE, null); },
+    setGrammarQueue: function (q) { write(K_GQUEUE, q); },
+
+    getGrammarBuffer: function () { return read(K_GBUFFER, []); },
+    pushRound: function (entry) {
+      var buf = read(K_GBUFFER, []);
+      buf.push(entry);
+      write(K_GBUFFER, buf);
+      return buf.length;
+    },
+    clearGrammarBuffer: function () {
+      try { localStorage.removeItem(K_GBUFFER); localStorage.removeItem(K_GBATCH); } catch (e) {}
+    },
+    getGrammarBatchId: function () {
+      var id = read(K_GBATCH, null);
+      if (!id) {
+        id = 'g_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        write(K_GBATCH, id);
       }
       return id;
     },

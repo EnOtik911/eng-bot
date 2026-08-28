@@ -5,5 +5,8 @@
  */
 window.ENGBOT_CONFIG = {
   WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwA99AIQJev042G_6fCmvmXNFanddmlTgPSU1zkcQwpPUH_9Q_u75RJ1RENEwRh50pcDg/exec',
-  VERSION: '0.5.0'
+  // Куда ведёт ярлык времени на карточке грамматики: теорию ты пишешь сам,
+  // приложение только всегда держит рядом ссылку на неё.
+  GRAMMAR_NOTES_URL: 'https://github.com/EnOtik911/eng-bot/blob/main/docs/grammar-map.md',
+  VERSION: '0.6.0'
 };

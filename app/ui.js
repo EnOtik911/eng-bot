@@ -7,6 +7,8 @@
   var session = null;
   var revealed = false;
   var flushing = false;
+  var gflushing = false;
+  var state = { vocab: null, grammar: null, grammarError: null };
 
   function el(id) { return document.getElementById(id); }
 
@@ -21,13 +23,24 @@
   function pendingCount() { return window.Store.getBuffer().length; }
 
   function refreshPending() {
-    var n = pendingCount();
+    var n = pendingCount() + window.Store.getGrammarBuffer().length;
     el('pending').textContent = n ? T.pendingBanner(n) : '';
   }
 
+  var SCREENS = ['screen-loading', 'screen-home', 'screen-picker', 'screen-card',
+    'screen-grammar', 'screen-round', 'screen-gdone', 'screen-empty', 'screen-done',
+    'screen-error'];
+
+  var CHROME_FREE = ['screen-home', 'screen-picker', 'screen-loading', 'screen-error'];
+
   function show(screen) {
-    ['screen-loading', 'screen-card', 'screen-empty', 'screen-done', 'screen-error']
-      .forEach(function (id) { el(id).hidden = id !== screen; });
+    SCREENS.forEach(function (id) { el(id).hidden = id !== screen; });
+    // Кнопка «назад» и полоса прогресса имеют смысл только внутри сессии.
+    el('home-btn').hidden = CHROME_FREE.indexOf(screen) >= 0;
+    if (CHROME_FREE.indexOf(screen) >= 0) {
+      el('counter').textContent = '';
+      el('progress').style.width = '0%';
+    }
   }
 
   /**
@@ -222,6 +235,34 @@
     return null;
   }
 
+  /** Отказ авторизации бьёт по обоим блокам, поэтому это экран ошибки, а не деградация. */
+  function isFatal(code) {
+    return code === 'BAD_INIT_DATA' || code === 'STALE_INIT_DATA' || code === 'NOT_ALLOWED';
+  }
+
+  function flushGrammar(force) {
+    var buffer = window.Store.getGrammarBuffer();
+    if (!buffer.length || gflushing) return Promise.resolve(null);
+    if (!navigator.onLine && !force) { setBanner(T.offlineBanner, 'warn'); return Promise.resolve(null); }
+
+    gflushing = true;
+    var batchId = window.Store.getGrammarBatchId();
+    return window.Api.flushGrammar(batchId, buffer).then(function (res) {
+      gflushing = false;
+      if (res && res.ok) {
+        window.Store.clearGrammarBuffer();
+        refreshPending();
+        return res;
+      }
+      return res;
+    }).catch(function () { gflushing = false; return null; });
+  }
+
+  /**
+   * Два запроса вместо одного и намеренно параллельно: это два независимых
+   * выполнения на стороне Apps Script, поэтому по времени они стоят почти как
+   * один — а главный экран без обоих счётчиков врал бы про то, где долги.
+   */
   function start() {
     show('screen-loading');
     refreshPending();
@@ -229,26 +270,63 @@
     var blocker = preflight();
     if (blocker) { showError(blocker); return; }
 
-    // Send anything left over from a previous launch before asking for new work.
-    flush().then(function () {
-      return window.Api.getSession();
-    }).then(function (payload) {
-      if (!payload || !payload.ok) {
-        showError(payload && payload.code);
-        return;
-      }
-      window.Store.setQueue(payload);
-      launch(payload);
-    }).catch(function () {
-      // No network: fall back to whatever queue was cached last time.
-      var cached = window.Store.getQueue();
-      if (cached) {
-        setBanner(T.offlineBanner, 'warn');
-        launch(cached);
-      } else {
-        showError(null);
-      }
+    Promise.all([flush(), flushGrammar()]).then(function () {
+      return Promise.all([
+        window.Api.getSession().catch(function () { return null; }),
+        window.Api.getGrammar().catch(function () { return null; })
+      ]);
+    }).then(function (res) {
+      var v = res[0];
+      var g = res[1];
+
+      if (v && !v.ok && isFatal(v.code)) { showError(v.code); return; }
+      if (g && !g.ok && isFatal(g.code)) { showError(g.code); return; }
+
+      if (v && v.ok) { window.Store.setQueue(v); state.vocab = v; }
+      else { state.vocab = window.Store.getQueue(); if (!v) setBanner(T.offlineBanner, 'warn'); }
+
+      if (g && g.ok) { window.Store.setGrammarQueue(g); state.grammar = g; state.grammarError = null; }
+      else { state.grammar = window.Store.getGrammarQueue(); state.grammarError = (g && g.code) || 'UNAVAILABLE'; }
+
+      if (!state.vocab && !state.grammar) { showError(v && v.code); return; }
+      renderHome();
     });
+  }
+
+  function renderHome() {
+    setBanner('');
+    var v = state.vocab;
+    var g = state.grammar;
+
+    var vDue = v ? (v.counts.due || 0) : 0;
+    var vNew = v ? (v.counts.new_in_session || 0) : 0;
+    el('tile-vocab-count').textContent = v
+      ? T.homeDue(vDue) + T.homeNew(vNew) : '—';
+    el('tile-vocab').disabled = !v;
+
+    var gDue = g && g.counts ? (g.counts.due || 0) : 0;
+    var gNew = g && g.counts ? (g.counts.new_in_session || 0) : 0;
+    el('tile-grammar-count').textContent = g
+      ? T.homeDue(gDue) + T.homeNew(gNew) : '—';
+    el('tile-grammar').disabled = !g || !(g.patterns && g.patterns.length);
+
+    var note = '';
+    if (!g || !(g.patterns && g.patterns.length)) note = T.grammarUnavailable;
+    el('home-note').hidden = !note;
+    el('home-note').textContent = note;
+
+    if (v && v.warnings) {
+      if (v.warnings.indexOf('trigger_stale') >= 0) setBanner(T.triggerStale, 'warn');
+      else if (v.warnings.indexOf('trigger_never_ran') >= 0) setBanner(T.triggerNever, 'warn');
+    }
+
+    show('screen-home');
+  }
+
+  function startVocab() {
+    var payload = state.vocab;
+    if (!payload) { showError(null); return; }
+    launch(payload);
   }
 
   function launch(payload) {
@@ -275,6 +353,11 @@
     el('retry').addEventListener('click', start);
     el('diag').addEventListener('click', runDiag);
     el('again-session').addEventListener('click', start);
+    el('home-btn').addEventListener('click', function () { renderHome(); });
+    el('tile-vocab').addEventListener('click', startVocab);
+    el('tile-grammar').addEventListener('click', function () {
+      if (window.GrammarUI) window.GrammarUI.open(state.grammar);
+    });
 
     document.addEventListener('keydown', function (e) {
       if (el('screen-card').hidden) return;
@@ -283,10 +366,12 @@
       if (revealed && e.key >= '1' && e.key <= '4') { e.preventDefault(); rate(parseInt(e.key, 10)); }
     });
 
-    window.addEventListener('online', function () { setBanner(''); flush(true); });
+    window.addEventListener('online', function () {
+      setBanner(''); flush(true); flushGrammar(true);
+    });
     window.addEventListener('offline', function () { setBanner(T.offlineBanner, 'warn'); });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'hidden') flush();
+      if (document.visibilityState === 'hidden') { flush(); flushGrammar(); }
     });
   }
 
@@ -302,6 +387,27 @@
     if (p.button_color) root.setProperty('--accent', p.button_color);
     if (p.secondary_bg_color) root.setProperty('--surface', p.secondary_bg_color);
   }
+
+  /**
+   * Общая часть, которой пользуется grammar-ui.js. Экран грамматики живёт в своём
+   * файле, но хром — баннер, прогресс, переключение экранов — один на приложение.
+   */
+  window.App = {
+    el: el,
+    show: show,
+    setBanner: setBanner,
+    T: T,
+    tg: tg,
+    errorText: errorText,
+    goHome: renderHome,
+    refreshPending: refreshPending,
+    flushGrammar: flushGrammar,
+    prefersReducedMotion: prefersReducedMotion,
+    progress: function (done, total) {
+      el('progress').style.width = Math.round(done / (total || 1) * 100) + '%';
+    },
+    counter: function (text) { el('counter').textContent = text; }
+  };
 
   document.addEventListener('DOMContentLoaded', function () {
     applyTheme();

@@ -13,6 +13,13 @@ function setupSpreadsheet() {
   ensureTab_(ss, SHEET_FLUSH_LOG, ['batch_id', 'received_at', 'count']);
   ensureTab_(ss, logSheetName_(), LOG_COLUMNS);
 
+  ensureTab_(ss, SHEET_PATTERNS, PATTERN_COLUMNS);
+  ensureTab_(ss, SHEET_GRAMMAR_ITEMS, GRAMMAR_ITEM_COLUMNS);
+  ensureTab_(ss, SHEET_GRAMMAR_INBOX, GRAMMAR_IMPORT_COLUMNS);
+  ensureTab_(ss, SHEET_GRAMMAR_REJECTS,
+    ['inbox_line', 'reason', 'ts'].concat(GRAMMAR_IMPORT_COLUMNS));
+  ensureTab_(ss, grammarLogSheetName_(), GRAMMAR_LOG_COLUMNS);
+
   var existing = readSettings_();
   var seeded = 0;
   Object.keys(DEFAULT_SETTINGS).forEach(function (k) {
@@ -29,6 +36,10 @@ function setupSpreadsheet() {
     SpreadsheetApp.newDataValidation().requireValueInList(VALID_TYPES, true).build());
   inbox.getRange(2, 6, 500, 1).setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInList(VALID_LAYERS, true).build());
+
+  var ginbox = ss.getSheetByName(SHEET_GRAMMAR_INBOX);
+  ginbox.getRange(2, GRAMMAR_IMPORT_COLUMNS.indexOf('kind') + 1, 500, 1).setDataValidation(
+    SpreadsheetApp.newDataValidation().requireValueInList(VALID_KINDS, true).build());
 
   Logger.log('setup done. settings seeded: ' + seeded);
   Logger.log('tabs: ' + ss.getSheets().map(function (s) { return s.getName(); }).join(', '));

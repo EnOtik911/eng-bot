@@ -21,11 +21,14 @@ function doGet(e) {
     var action = e && e.parameter ? e.parameter.action : null;
     if (action === 'ping') return json_({ ok: true, pong: new Date().toISOString() });
     if (action === 'diag') return json_(diagInitData(e.parameter.initData));
-    if (action !== 'session') return fail_('BAD_REQUEST', 'unknown action: ' + action);
+    if (action !== 'session' && action !== 'grammar') {
+      return fail_('BAD_REQUEST', 'unknown action: ' + action);
+    }
 
     var auth = verifyInitData(e.parameter.initData);
     if (!auth.ok) return fail_(auth.code);
 
+    if (action === 'grammar') return json_(buildGrammarSession(auth.userId));
     return json_(buildSession(auth.userId));
   } catch (err) {
     Logger.log('doGet: ' + err.stack);
@@ -48,11 +51,16 @@ function doPost(e) {
       return json_({ ok: true });
     }
 
-    if (payload.action !== 'flush') return fail_('BAD_REQUEST', 'unknown action');
+    if (payload.action !== 'flush' && payload.action !== 'grammar_flush') {
+      return fail_('BAD_REQUEST', 'unknown action');
+    }
 
     var auth = verifyInitData(payload.initData);
     if (!auth.ok) return fail_(auth.code);
 
+    if (payload.action === 'grammar_flush') {
+      return json_(applyGrammarFlush(auth.userId, payload.batch_id, payload.rounds));
+    }
     return json_(applyFlush(auth.userId, payload.batch_id, payload.reviews));
   } catch (err) {
     Logger.log('doPost: ' + err.stack);
