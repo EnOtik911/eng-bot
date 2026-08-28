@@ -32,6 +32,10 @@ window.I18N = {
     counterNew: 'новые',
     directionRecog: 'EN → RU',
     directionProd: 'RU → EN',
-    retry: 'Повторить'
+    retry: 'Повторить',
+    diag: 'Показать диагностику',
+    errNoSdk: 'SDK Telegram не загрузился — страница открыта вне Telegram или скрипт telegram.org заблокирован',
+    errNoInitData: 'Telegram не передал данные запуска. Так бывает, если приложение открыто по ссылке, а не кнопкой Mini App, либо кеш держит старую версию страницы',
+    codeLabel: 'код'
   }
 };

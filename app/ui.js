@@ -120,27 +120,85 @@
     });
   }
 
+  /** Показывает не только текст, но и код: без кода причину приходится угадывать. */
+  function showError(code) {
+    el('error-body').textContent = errorText(code);
+    el('error-code').textContent = code ? T.codeLabel + ': ' + code : '';
+    el('diag').hidden = false;
+    show('screen-error');
+  }
+
+  function runDiag() {
+    var url = (window.ENGBOT_CONFIG.WEB_APP_URL) + '?action=diag&initData=' +
+      encodeURIComponent((window.Telegram && window.Telegram.WebApp &&
+        window.Telegram.WebApp.initData) || '');
+    var tg = window.Telegram && window.Telegram.WebApp;
+    var client = {
+      sdk_loaded: !!tg,
+      platform: tg ? tg.platform : null,
+      version: tg ? tg.version : null,
+      init_data_length: tg && tg.initData ? tg.initData.length : 0,
+      init_data_unsafe_user_id: tg && tg.initDataUnsafe && tg.initDataUnsafe.user
+        ? String(tg.initDataUnsafe.user.id) : null,
+      backend_url_set: !!(window.ENGBOT_CONFIG &&
+        window.ENGBOT_CONFIG.WEB_APP_URL &&
+        window.ENGBOT_CONFIG.WEB_APP_URL.indexOf('PASTE_') !== 0),
+      app_version: window.ENGBOT_CONFIG ? window.ENGBOT_CONFIG.VERSION : null
+    };
+    el('diag-out').hidden = false;
+    el('diag-out').textContent = 'КЛИЕНТ:\n' + JSON.stringify(client, null, 2) +
+      '\n\nСЕРВЕР: запрашиваю…';
+    fetch(url, { method: 'GET', redirect: 'follow' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        el('diag-out').textContent = el('diag-out').textContent
+          .replace('СЕРВЕР: запрашиваю…', 'СЕРВЕР:\n' + JSON.stringify(d, null, 2));
+      })
+      .catch(function (e) {
+        el('diag-out').textContent = el('diag-out').textContent
+          .replace('СЕРВЕР: запрашиваю…', 'СЕРВЕР: не отвечает — ' + e.message);
+      });
+  }
+
   function errorText(code) {
     switch (code) {
       case 'BAD_INIT_DATA': return T.errAuth;
       case 'STALE_INIT_DATA': return T.errStale;
       case 'NOT_ALLOWED': return T.errNotAllowed;
       case 'LOCKED': return T.errLocked;
+      case 'NO_SDK': return T.errNoSdk;
+      case 'NO_INIT_DATA': return T.errNoInitData;
+      case 'NO_BACKEND_URL': return 'В app/config.js не подставлен адрес backend';
       default: return T.errGeneric;
     }
+  }
+
+  /**
+   * Разделяет три разных сбоя, которые раньше показывались одним сообщением:
+   * SDK не загрузился, SDK есть но initData пустая, и отказ сервера.
+   * Без этого различия причину приходится угадывать — что и произошло.
+   */
+  function preflight() {
+    if (!window.Telegram || !window.Telegram.WebApp) return 'NO_SDK';
+    if (!window.Telegram.WebApp.initData) return 'NO_INIT_DATA';
+    if (!window.ENGBOT_CONFIG || !window.ENGBOT_CONFIG.WEB_APP_URL ||
+        window.ENGBOT_CONFIG.WEB_APP_URL.indexOf('PASTE_') === 0) return 'NO_BACKEND_URL';
+    return null;
   }
 
   function start() {
     show('screen-loading');
     refreshPending();
 
+    var blocker = preflight();
+    if (blocker) { showError(blocker); return; }
+
     // Send anything left over from a previous launch before asking for new work.
     flush().then(function () {
       return window.Api.getSession();
     }).then(function (payload) {
       if (!payload || !payload.ok) {
-        el('error-body').textContent = errorText(payload && payload.code);
-        show('screen-error');
+        showError(payload && payload.code);
         return;
       }
       window.Store.setQueue(payload);
@@ -152,8 +210,7 @@
         setBanner(T.offlineBanner, 'warn');
         launch(cached);
       } else {
-        el('error-body').textContent = T.errGeneric;
-        show('screen-error');
+        showError(null);
       }
     });
   }
@@ -176,6 +233,7 @@
       if (r) rate(parseInt(r, 10));
     });
     el('retry').addEventListener('click', start);
+    el('diag').addEventListener('click', runDiag);
     el('again-session').addEventListener('click', start);
 
     document.addEventListener('keydown', function (e) {

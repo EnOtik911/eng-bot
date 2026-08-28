@@ -5,5 +5,5 @@
  */
 window.ENGBOT_CONFIG = {
   WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwA99AIQJev042G_6fCmvmXNFanddmlTgPSU1zkcQwpPUH_9Q_u75RJ1RENEwRh50pcDg/exec',
-  VERSION: '0.1.1'
+  VERSION: '0.1.2'
 };

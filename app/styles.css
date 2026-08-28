@@ -143,3 +143,18 @@ body {
   font-weight: 400;
 }
 @media (pointer: coarse) { .key { display: none; } }
+
+.diag-out {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 50vh;
+  overflow-y: auto;
+}

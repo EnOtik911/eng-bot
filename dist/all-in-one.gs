@@ -510,6 +510,111 @@ function verifyWebhookSecret_(e) {
   return header === null || header === undefined ? false : header === cfg_('BOT_TOKEN').slice(-16);
 }
 
+/**
+ * Диагностика валидации без раскрытия секретов.
+ *
+ * Возвращает: какие поля пришли, возраст auth_date, длины и первые 8 символов
+ * ожидаемого и полученного хеша, попадание в allowlist, отпечаток токена.
+ * Отпечаток — первые 8 символов SHA-256 от токена: позволяет сравнить «тот ли
+ * токен стоит в свойствах», не показывая сам токен.
+ */
+function diagInitData(initData) {
+  var out = { ok: true, checks: {} };
+
+  var token = PropertiesService.getScriptProperties().getProperty('BOT_TOKEN');
+  out.checks.bot_token_set = !!token;
+  out.checks.bot_token_length = token ? token.length : 0;
+  if (token) {
+    var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token);
+    out.checks.bot_token_fingerprint = digest.slice(0, 4).map(function (b) {
+      var v = (b < 0 ? b + 256 : b).toString(16);
+      return v.length === 1 ? '0' + v : v;
+    }).join('');
+    out.checks.bot_token_id = token.split(':')[0];   // публичная часть, это id бота
+  }
+
+  // Решающая проверка: жив ли токен, который лежит в свойствах, и от какого он бота.
+  // Если токен отозвали через /revoke, а в свойствах остался прежний — здесь придёт 401,
+  // и это ровно та причина, по которой хеш initData не сходится.
+  if (token) {
+    try {
+      var res = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/getMe',
+        { muteHttpExceptions: true });
+      var body = JSON.parse(res.getContentText());
+      out.checks.bot_token_valid = !!body.ok;
+      if (body.ok) {
+        out.checks.bot_username = body.result.username;
+        out.checks.bot_id = String(body.result.id);
+      } else {
+        out.checks.bot_token_error = body.description || ('HTTP ' + res.getResponseCode());
+      }
+    } catch (e) {
+      out.checks.bot_token_valid = 'проверить не удалось: ' + e.message;
+    }
+  }
+
+  var allow = [];
+  try { allow = cfgAllowlist_(); } catch (e) {}
+  out.checks.allowlist_size = allow.length;
+  out.checks.allowlist_values = allow;              // это твои же user_id, не секрет
+
+  if (!initData) { out.checks.init_data = 'пусто'; return out; }
+  out.checks.init_data_length = initData.length;
+
+  var pairs = initData.split('&');
+  var data = {};
+  pairs.forEach(function (p) {
+    var eq = p.indexOf('=');
+    if (eq < 0) return;
+    data[decodeURIComponent(p.slice(0, eq))] = decodeURIComponent(p.slice(eq + 1));
+  });
+  out.checks.fields = Object.keys(data).sort();
+  out.checks.has_hash = !!data.hash;
+  out.checks.hash_length = data.hash ? data.hash.length : 0;
+
+  if (data.auth_date) {
+    var age = Math.floor(Date.now() / 1000) - parseInt(data.auth_date, 10);
+    out.checks.auth_date_age_seconds = age;
+    out.checks.auth_date_within_window = age <= AUTH_MAX_AGE_SECONDS;
+  }
+
+  var uid = '';
+  try { uid = String(JSON.parse(data.user || '{}').id || ''); } catch (e) {}
+  out.checks.user_id_from_init_data = uid;
+  out.checks.user_in_allowlist = uid ? allow.indexOf(uid) >= 0 : false;
+
+  if (token && data.hash) {
+    var keys = Object.keys(data).filter(function (k) {
+      return k !== 'hash' && k !== 'signature';
+    }).sort();
+    var checkString = keys.map(function (k) { return k + '=' + data[k]; }).join('\n');
+    var secret = hmacBytes_(Utilities.newBlob('WebAppData').getBytes(), token);
+    var expected = hmacHex_(secret, checkString);
+    out.checks.hash_received_head = data.hash.slice(0, 8);
+    out.checks.hash_expected_head = expected.slice(0, 8);
+    out.checks.hash_matches = constantTimeEquals_(expected, data.hash);
+    out.checks.check_string_fields = keys;
+  }
+
+  var verdict = verifyInitData(initData);
+  out.verdict = verdict.ok ? 'OK' : verdict.code;
+
+  // Что именно сделать, если не сошлось
+  if (out.checks.bot_token_valid === false) {
+    out.hint = 'Токен в Script Properties недействителен (' +
+      (out.checks.bot_token_error || 'getMe отказал') + '). Скорее всего он отозван через ' +
+      '/revoke, а новый в свойства не положили. Возьми текущий токен у BotFather ' +
+      'и замени BOT_TOKEN.';
+  } else if (out.checks.hash_matches === false) {
+    out.hint = 'Токен рабочий, но хеш не сошёлся: приложение открыто из другого бота, ' +
+      'чем тот, чей токен в свойствах. Сверь bot_username ниже с ботом, из которого ' +
+      'открываешь приложение.';
+  } else if (out.checks.user_in_allowlist === false && uid) {
+    out.hint = 'Подпись верна, но user_id ' + uid + ' не в ALLOWLIST. Добавь его в свойства.';
+  }
+  return out;
+}
+
 // ==========================================================================
 // Session.gs
 // ==========================================================================
@@ -1278,6 +1383,7 @@ function doGet(e) {
   try {
     var action = e && e.parameter ? e.parameter.action : null;
     if (action === 'ping') return json_({ ok: true, pong: new Date().toISOString() });
+    if (action === 'diag') return json_(diagInitData(e.parameter.initData));
     if (action !== 'session') return fail_('BAD_REQUEST', 'unknown action: ' + action);
 
     var auth = verifyInitData(e.parameter.initData);

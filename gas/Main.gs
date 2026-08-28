@@ -20,6 +20,7 @@ function doGet(e) {
   try {
     var action = e && e.parameter ? e.parameter.action : null;
     if (action === 'ping') return json_({ ok: true, pong: new Date().toISOString() });
+    if (action === 'diag') return json_(diagInitData(e.parameter.initData));
     if (action !== 'session') return fail_('BAD_REQUEST', 'unknown action: ' + action);
 
     var auth = verifyInitData(e.parameter.initData);
