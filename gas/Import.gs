@@ -117,7 +117,8 @@ function importInbox(userId) {
         layer: r.layer, topic: r.topic, note: r.note,
         state: dir === 'recog' ? 'new' : 'locked',
         due: '', stability: '', difficulty: '', reps: 0, lapses: 0,
-        last_review: '', created_at: now, user_id: userId, source_batch: batch
+        last_review: '', created_at: now, user_id: userId, source_batch: batch,
+        first_review: ''
       };
       CARD_COLUMNS.forEach(function (c) { row.push(values[c]); });
       cardRows.push(row);

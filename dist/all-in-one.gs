@@ -28,7 +28,10 @@ var SHEET_FLUSH_LOG = 'flush_log';
 var CARD_COLUMNS = [
   'card_id', 'item_id', 'direction', 'type', 'en', 'ru', 'example_en', 'example_ru',
   'layer', 'topic', 'note', 'state', 'due', 'stability', 'difficulty', 'reps',
-  'lapses', 'last_review', 'created_at', 'user_id', 'source_batch'
+  'lapses', 'last_review', 'created_at', 'user_id', 'source_batch',
+  // Добавлена после первой живой сессии. Только в конце: вставка в середину сдвинула
+  // бы значения во всех существующих строках.
+  'first_review'
 ];
 
 var IMPORT_COLUMNS = ['type', 'en', 'ru', 'example_en', 'example_ru', 'layer', 'topic', 'note'];
@@ -677,6 +680,13 @@ function buildSession(userId) {
   var fresh = [];
   var leeches = 0;
   var locked = 0;
+  var introducedToday = 0;
+
+  mine.forEach(function (c) {
+    // Сколько новых уже введено сегодня. Считается по строке карточки, а не по
+    // журналу: планировщик журнал не читает, это условие из ADR-02.
+    if (c.first_review && String(c.first_review).slice(0, 10) === today) introducedToday++;
+  });
 
   mine.forEach(function (c) {
     var state = String(c.state || '');
@@ -698,8 +708,13 @@ function buildSession(userId) {
     return String(a.created_at) < String(b.created_at) ? -1 : 1;
   });
 
+  // The daily allowance is per DAY, not per app launch. Serving `newTarget` on every
+  // launch is what produced fifteen new cards in one sitting during the first real
+  // session, against a target of six — and fifteen cards due the next morning.
+  var newAllowance = Math.max(newTarget - introducedToday, 0);
+
   // Due cards always come before new ones: debt first, growth second.
-  var queue = due.concat(fresh.slice(0, newTarget)).slice(0, cap);
+  var queue = due.concat(fresh.slice(0, newAllowance)).slice(0, cap);
 
   var warnings = [];
   if (settings.last_trigger_run) {
@@ -736,7 +751,9 @@ function buildSession(userId) {
     counts: {
       due: due.length,
       new_available: fresh.length,
-      new_in_session: Math.min(fresh.length, newTarget),
+      new_in_session: Math.min(fresh.length, newAllowance),
+      new_introduced_today: introducedToday,
+      new_allowance_left: newAllowance,
       total: mine.length,
       leeches: leeches,
       locked: locked
@@ -803,14 +820,16 @@ function applyFlush(userId, batchId, reviews) {
     card.state = isLeech ? 'leech' : 'review';
     card.due = isLeech ? '' : dueStr;
 
-    updates[card.card_id] = {
-      _row: card._row,
-      patch: {
-        state: card.state, due: card.due, stability: out.stability,
-        difficulty: out.difficulty, reps: out.reps, lapses: out.lapses,
-        last_review: today
-      }
+    var patch = {
+      state: card.state, due: card.due, stability: out.stability,
+      difficulty: out.difficulty, reps: out.reps, lapses: out.lapses,
+      last_review: today
     };
+    // Дата первого в жизни показа. Ставится один раз и больше не меняется —
+    // по ней считается дневная норма новых.
+    if (!card.first_review) { patch.first_review = today; card.first_review = today; }
+
+    updates[card.card_id] = { _row: card._row, patch: patch };
 
     if (isLeech && newLeeches.indexOf(card.card_id) < 0) newLeeches.push(card.card_id);
 
@@ -970,7 +989,8 @@ function importInbox(userId) {
         layer: r.layer, topic: r.topic, note: r.note,
         state: dir === 'recog' ? 'new' : 'locked',
         due: '', stability: '', difficulty: '', reps: 0, lapses: 0,
-        last_review: '', created_at: now, user_id: userId, source_batch: batch
+        last_review: '', created_at: now, user_id: userId, source_batch: batch,
+        first_review: ''
       };
       CARD_COLUMNS.forEach(function (c) { row.push(values[c]); });
       cardRows.push(row);
@@ -1276,6 +1296,28 @@ function seedStarterBatch() {
   var sh = sheet_(SHEET_INBOX);
   sh.getRange(sh.getLastRow() + 1, 1, rows.length, IMPORT_COLUMNS.length).setValues(rows);
   Logger.log('seeded ' + rows.length + ' rows into inbox — now run "Импортировать батч" from the menu');
+}
+
+/**
+ * Заполняет first_review для карточек, созданных до появления этой колонки.
+ * Идемпотентна: уже заполненные не трогает. Запустить один раз после обновления кода.
+ */
+function backfillFirstReview() {
+  var cards = readCards_();
+  var updates = [];
+  cards.forEach(function (c) {
+    if (c.first_review) return;
+    if (!c.last_review) return;                 // ещё ни разу не показывалась
+    updates.push({
+      _row: c._row,
+      patch: { first_review: String(c.last_review).slice(0, 10) }
+    });
+  });
+  var written = writeCardUpdates_(updates);
+  Logger.log('first_review заполнен у ' + written + ' карточек из ' + cards.length);
+  Logger.log('Внимание: для уже показанных карточек в качестве даты первого показа взята '
+    + 'дата последнего — точнее взять негде, и это влияет только на подсчёт дневной нормы.');
+  return written;
 }
 
 // ==========================================================================

@@ -80,3 +80,25 @@ function seedStarterBatch() {
   sh.getRange(sh.getLastRow() + 1, 1, rows.length, IMPORT_COLUMNS.length).setValues(rows);
   Logger.log('seeded ' + rows.length + ' rows into inbox — now run "Импортировать батч" from the menu');
 }
+
+/**
+ * Заполняет first_review для карточек, созданных до появления этой колонки.
+ * Идемпотентна: уже заполненные не трогает. Запустить один раз после обновления кода.
+ */
+function backfillFirstReview() {
+  var cards = readCards_();
+  var updates = [];
+  cards.forEach(function (c) {
+    if (c.first_review) return;
+    if (!c.last_review) return;                 // ещё ни разу не показывалась
+    updates.push({
+      _row: c._row,
+      patch: { first_review: String(c.last_review).slice(0, 10) }
+    });
+  });
+  var written = writeCardUpdates_(updates);
+  Logger.log('first_review заполнен у ' + written + ' карточек из ' + cards.length);
+  Logger.log('Внимание: для уже показанных карточек в качестве даты первого показа взята '
+    + 'дата последнего — точнее взять негде, и это влияет только на подсчёт дневной нормы.');
+  return written;
+}

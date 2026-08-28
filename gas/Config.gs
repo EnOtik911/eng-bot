@@ -15,7 +15,10 @@ var SHEET_FLUSH_LOG = 'flush_log';
 var CARD_COLUMNS = [
   'card_id', 'item_id', 'direction', 'type', 'en', 'ru', 'example_en', 'example_ru',
   'layer', 'topic', 'note', 'state', 'due', 'stability', 'difficulty', 'reps',
-  'lapses', 'last_review', 'created_at', 'user_id', 'source_batch'
+  'lapses', 'last_review', 'created_at', 'user_id', 'source_batch',
+  // Добавлена после первой живой сессии. Только в конце: вставка в середину сдвинула
+  // бы значения во всех существующих строках.
+  'first_review'
 ];
 
 var IMPORT_COLUMNS = ['type', 'en', 'ru', 'example_en', 'example_ru', 'layer', 'topic', 'note'];

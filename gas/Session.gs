@@ -29,6 +29,13 @@ function buildSession(userId) {
   var fresh = [];
   var leeches = 0;
   var locked = 0;
+  var introducedToday = 0;
+
+  mine.forEach(function (c) {
+    // Сколько новых уже введено сегодня. Считается по строке карточки, а не по
+    // журналу: планировщик журнал не читает, это условие из ADR-02.
+    if (c.first_review && String(c.first_review).slice(0, 10) === today) introducedToday++;
+  });
 
   mine.forEach(function (c) {
     var state = String(c.state || '');
@@ -50,8 +57,13 @@ function buildSession(userId) {
     return String(a.created_at) < String(b.created_at) ? -1 : 1;
   });
 
+  // The daily allowance is per DAY, not per app launch. Serving `newTarget` on every
+  // launch is what produced fifteen new cards in one sitting during the first real
+  // session, against a target of six — and fifteen cards due the next morning.
+  var newAllowance = Math.max(newTarget - introducedToday, 0);
+
   // Due cards always come before new ones: debt first, growth second.
-  var queue = due.concat(fresh.slice(0, newTarget)).slice(0, cap);
+  var queue = due.concat(fresh.slice(0, newAllowance)).slice(0, cap);
 
   var warnings = [];
   if (settings.last_trigger_run) {
@@ -88,7 +100,9 @@ function buildSession(userId) {
     counts: {
       due: due.length,
       new_available: fresh.length,
-      new_in_session: Math.min(fresh.length, newTarget),
+      new_in_session: Math.min(fresh.length, newAllowance),
+      new_introduced_today: introducedToday,
+      new_allowance_left: newAllowance,
       total: mine.length,
       leeches: leeches,
       locked: locked
@@ -155,14 +169,16 @@ function applyFlush(userId, batchId, reviews) {
     card.state = isLeech ? 'leech' : 'review';
     card.due = isLeech ? '' : dueStr;
 
-    updates[card.card_id] = {
-      _row: card._row,
-      patch: {
-        state: card.state, due: card.due, stability: out.stability,
-        difficulty: out.difficulty, reps: out.reps, lapses: out.lapses,
-        last_review: today
-      }
+    var patch = {
+      state: card.state, due: card.due, stability: out.stability,
+      difficulty: out.difficulty, reps: out.reps, lapses: out.lapses,
+      last_review: today
     };
+    // Дата первого в жизни показа. Ставится один раз и больше не меняется —
+    // по ней считается дневная норма новых.
+    if (!card.first_review) { patch.first_review = today; card.first_review = today; }
+
+    updates[card.card_id] = { _row: card._row, patch: patch };
 
     if (isLeech && newLeeches.indexOf(card.card_id) < 0) newLeeches.push(card.card_id);
 

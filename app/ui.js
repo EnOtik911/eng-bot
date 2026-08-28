@@ -31,10 +31,13 @@
   }
 
   function renderCounters() {
+    var newPart = T.counterNew + ' ' + (session.counts.new_in_session || 0);
+    if (session.counts.new_introduced_today) {
+      newPart += ' (сегодня уже ' + session.counts.new_introduced_today + ')';
+    }
     el('counter').textContent =
-      T.counterDue + ' ' + (session.counts.due || 0) + ' · ' +
-      T.counterNew + ' ' + (session.counts.new_in_session || 0) + ' · ' +
-      'осталось ' + session.remaining();
+      T.counterDue + ' ' + (session.counts.due || 0) + ' · ' + newPart +
+      ' · осталось ' + session.remaining();
   }
 
   function renderCard() {
