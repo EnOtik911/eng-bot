@@ -49,6 +49,11 @@ function check(name, fn) {
 }
 function assert(c, m) { if (!c) throw new Error(m); }
 
+/** Сколько правил объявляют стекло — используется как нижняя граница числа блюров. */
+function glassSelectorCount() {
+  return [...css.matchAll(/^\s*([^@{}\n][^{}\n]*)\{[^}]*[^-]backdrop-filter\s*:/gm)].length;
+}
+
 console.log('CSS: бюджет производительности');
 
 check('backdrop-filter стоит не более чем на 5 селекторах', () => {
@@ -72,23 +77,35 @@ check('каждое backdrop-filter имеет -webkit- пару', () => {
 });
 
 check('значение блюра не превышает 20px', () => {
-  const values = [...css.matchAll(/backdrop-filter\s*:\s*blur\(([^)]+)\)/g)]
-    .map(m => m[1].trim());
-  const resolved = values.map(v => {
-    if (v.startsWith('var(')) {
-      const name = v.match(/var\(\s*(--[\w-]+)/)[1];
-      const decl = css.match(new RegExp(name + ':\\s*([^;]+);'));
-      return decl ? decl[1].trim() : v;
-    }
-    return v;
-  });
-  console.log('         блюр: ' + resolved.join(', '));
-  resolved.forEach(v => {
+  // Значение приходит через цепочку переменных: backdrop-filter -> --glass-fx ->
+  // --glass-blur. Одноуровневая подстановка перестала его находить и тест молча начал
+  // проверять только запасные 1px из @supports. Поэтому var() раскрывается до конца,
+  // и отдельно утверждается, что найдено не меньше значений, чем стёкол — иначе
+  // следующий такой рефакторинг снова спрячет измерение.
+  const resolveVars = (value, depth = 0) => {
+    if (depth > 5) return value;
+    return value.replace(/var\(\s*(--[\w-]+)\s*\)/g, (whole, name) => {
+      const decl = css.match(new RegExp('^\\s*' + name + ':\\s*([^;]+);', 'm'));
+      return decl ? resolveVars(decl[1].trim(), depth + 1) : whole;
+    });
+  };
+
+  const declarations = [...css.matchAll(/(?:^|[^-])backdrop-filter\s*:\s*([^;]+);/g)]
+    .map(m => resolveVars(m[1].trim()));
+  const blurs = declarations.flatMap(d =>
+    [...d.matchAll(/blur\(([^)]+)\)/g)].map(m => m[1].trim()));
+
+  console.log('         блюр: ' + blurs.join(', '));
+  assert(blurs.length >= glassSelectorCount(),
+    'найдено значений блюра ' + blurs.length + ', а стёкол ' + glassSelectorCount() +
+    ' — значение спрятано за переменной, которую тест не раскрыл');
+  blurs.forEach(v => {
     const px = parseFloat(v);
     assert(!Number.isNaN(px), 'не удалось разобрать значение блюра: ' + v);
     assert(px <= 20, px + 'px превышает бюджет — 8-16 рекомендуемо, 20 предел');
   });
 });
+
 
 check('blur и backdrop-filter не участвуют в анимациях и переходах', () => {
   const keyframeBlocks = blocks(css, /@keyframes\s+[\w-]+/);
@@ -122,10 +139,44 @@ check('фоновые пятна анимируются только по transf
   console.log('         пятна двигаются только по transform');
 });
 
+check('запасной вариант покрывает КАЖДОЕ стекло, а не первые два', () => {
+  // Без поддержки backdrop-filter полупрозрачная заливка не размывает фон, а
+  // пропускает его: контур фоновых фигур встанет прямо под текстом. Раньше здесь
+  // проверялось только наличие блока, поэтому два новых стекла остались бы без него.
+  const block = css.match(/@supports not \(\([\s\S]*?\n\}/);
+  assert(block, 'блок @supports not не найден');
+  const covered = [...block[0].matchAll(/\.([a-z][a-z0-9-]*)/g)].map(m => m[1]);
+  const glasses = [...css.matchAll(/^\s*\.([a-z0-9-]+)[^{}\n]*\{[^}]*[^-]backdrop-filter\s*:/gm)]
+    .map(m => m[1]);
+  const missing = glasses.filter(g => !covered.includes(g));
+  assert(missing.length === 0,
+    'стёкла без запасного варианта: ' + missing.join(', '));
+  console.log('         под запасным вариантом: ' + covered.join(', '));
+});
+
 check('есть запасной вариант, если backdrop-filter не поддержан', () => {
   assert(/@supports not \(\(backdrop-filter/.test(css),
     'нужен @supports not: без него на неподдерживающем движке стекло станет ' +
     'прозрачной пустотой, а текст ляжет прямо на градиент');
+});
+
+check('отключение движения накрывает ВСЁ, а не перечисленное', () => {
+  // Раньше здесь проверялось только наличие блока. Перечислять в нём селекторы —
+  // значит забыть следующую добавленную анимацию, и тест этого не заметит.
+  // Держит всё именно универсальное правило, поэтому проверяется оно.
+  const block = css.match(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/);
+  assert(block, 'блок prefers-reduced-motion не найден');
+  const universal = block[1].match(/\*\s*,\s*\*::before\s*,\s*\*::after\s*\{([^}]*)\}/);
+  assert(universal, 'нет универсального правила — тогда каждая новая анимация ' +
+    'должна быть перечислена вручную, и однажды не будет');
+  assert(/animation-duration:[^;]*!important/.test(universal[1]),
+    'animation-duration без !important проигрывает авторским правилам');
+  assert(/transition-duration:[^;]*!important/.test(universal[1]),
+    'переходы не отключены');
+  const animated = [...css.matchAll(/^\s*([^@{}\n][^{}\n]*)\{[^}]*animation:/gm)]
+    .map(m => m[1].trim().split('\n').pop().trim())
+    .filter(sel => !sel.startsWith('.card.card-leaving'));
+  console.log('         анимировано селекторов: ' + animated.length + ' — все под универсальным правилом');
 });
 
 check('движение отключается при prefers-reduced-motion', () => {

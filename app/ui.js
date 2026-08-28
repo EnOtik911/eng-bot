@@ -375,17 +375,25 @@
     });
   }
 
+  /**
+   * Палитра приложения НЕ берётся из themeParams Telegram, и это решение, а не пропуск.
+   *
+   * Раньше здесь переписывались пять переменных, из которых в styles.css существовали
+   * две. Одна из них — `--fg`. У пользователя тёмная тема Telegram, значит `text_color`
+   * приходил белым, `--fg` становился белым, а фон оставался светлым: белый текст на
+   * белом стекле. Всё, что использовало `--fg-dim` и `--fg-faint`, при этом читалось
+   * прекрасно — потому что имена тех переменных Telegram не знал.
+   *
+   * Взять половину цветов из чужой темы, а половину оставить своими — это и есть
+   * гарантированный способ получить такое. Либо адаптироваться целиком, либо не
+   * адаптироваться вовсе. Выбрано второе: контраст здесь проверен тестом именно для
+   * этой палитры, а темы Telegram задаёт пользователь и гарантировать на них 4.5:1
+   * невозможно.
+   */
   function applyTheme() {
     if (!tg) return;
     tg.ready();
     tg.expand();
-    var p = tg.themeParams || {};
-    var root = document.documentElement.style;
-    if (p.bg_color) root.setProperty('--bg', p.bg_color);
-    if (p.text_color) root.setProperty('--fg', p.text_color);
-    if (p.hint_color) root.setProperty('--muted', p.hint_color);
-    if (p.button_color) root.setProperty('--accent', p.button_color);
-    if (p.secondary_bg_color) root.setProperty('--surface', p.secondary_bg_color);
   }
 
   /**

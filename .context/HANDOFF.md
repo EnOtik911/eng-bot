@@ -21,6 +21,46 @@ sequencing decision was taken on evidence rather than referred back.
 | 8 | Docs: spec, grammar map, generation prompt, user guide, ADR-04 | VERIFIED |
 | 9 | Deploy | BLOCKED on owner |
 
+## T-007 — visual fix (v0.6.1), same session
+
+Owner reported white-on-white text on his phone with a screenshot. Root cause was NOT
+in the palette: `applyTheme` overwrote five CSS variables from Telegram's themeParams,
+of which only two existed in styles.css. One was `--fg`. His Telegram is in dark theme,
+so `text_color` arrived white, `--fg` became white, the background stayed light.
+Everything on `--fg-dim`/`--fg-faint` stayed readable because Telegram does not know
+those names — which is exactly how the screenshot could be read element by element.
+
+contrast.test.mjs could not see it: it reads values from CSS while the substitution
+happened in JS. Textbook case of a suite checking consistency instead of correctness.
+
+Fixed by removing the themeParams palette read entirely (see the comment in
+`app/ui.js:applyTheme` for why half-adaptation is the worst option), plus
+`test/theme.test.mjs` which asserts the runtime never overrides a variable the contrast
+suite depends on, and that every variable the runtime does set actually exists.
+
+Also delivered from the same message: fourth glass layer (`.pattern-row`), stronger
+refraction (`saturate(200%)`, inset specular edge, glass fill .62 -> .56), and a
+sharp-edged decor layer (paper plane, four rings) — sharp edges are the requirement, a
+blurred blob under a blurring surface gives nothing to refract.
+
+Two other suites were found to be weaker than they looked, and strengthened:
+- css-perf's blur check silently degraded to measuring only the 1px @supports fallbacks
+  once the value moved behind `--glass-fx`; now it resolves var() chains and asserts it
+  found at least as many blur values as there are glass rules
+- the @supports fallback and prefers-reduced-motion checks asserted the block exists,
+  not that it covers every glass / every animation; both now check coverage
+
+`--fg-faint` regressed to 4.49:1 when the glass got more transparent — caught by the
+contrast suite and fixed to #57647C (4.69:1), computed against the same background the
+suite composites rather than picked by eye.
+
+Verified visually, not only by reasoning: rendered headless in a scratchpad Playwright
+(NOT the owner's browser) with a stub Telegram SDK carrying his DARK theme, and read the
+pixels. Darkest pixel in the title box is luminance 21 against #0E1526 = 19. My own
+first read of the full-page screenshot said "still washed out" and was wrong — the
+downscaled PNG averaged the glyphs away; the 3x crop and the pixel measurement agree the
+text is black.
+
 ## Settled decisions (do not re-litigate)
 
 - FSRS state on the PATTERN, sentences drawn from a pool — scheduling the sentence
@@ -43,6 +83,13 @@ sequencing decision was taken on evidence rather than referred back.
   duplicate check must not swallow the other — `app/store.js`
 - Seed corpus routed through the real importer, not written straight to the sheet —
   found the dedupe-key defect on the first run
+- The app's palette is NEVER taken from Telegram themeParams. Half from a foreign theme
+  and half our own is what produced white-on-white; contrast is tested for this palette
+  only — `app/ui.js:applyTheme`, `test/theme.test.mjs`
+- Exactly four glass surfaces, budget five. Decor shapes must stay sharp-edged: blur
+  under blur refracts nothing — `app/styles.css`
+- `item.kind` is a schema value and never reaches the screen; the Russian per-kind
+  instruction is the only label — `test/dom-ids.test.mjs`
 
 ## Verification evidence (by reference)
 

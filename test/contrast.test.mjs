@@ -117,6 +117,19 @@ check('текст на главной кнопке проходит 4.5:1', () =
   });
 });
 
+check('текст на ярлыке времени проходит 4.5:1', () => {
+  // Ярлык грамматики — белым по градиенту, и он на каждом экране упражнения.
+  // Проверяется отдельно от кнопки: у них разные градиенты и разный кегль.
+  const grad = css.match(/\.tag-accent\s*\{[^}]*background:\s*linear-gradient\(([^;]+)\);/);
+  if (!grad) throw new Error('градиент .tag-accent не найден');
+  const stops = [...grad[1].matchAll(/var\(\s*(--[\w-]+)\s*\)|(#[0-9A-Fa-f]{6})/g)]
+    .map(m => m[1] ? cssVar(m[1].slice(2)) : m[2]);
+  if (!stops.length) throw new Error('остановки градиента не разобраны');
+  stops.forEach(function (stop, i) {
+    expect('tag-accent остановка ' + (i + 1), '#FFFFFF', 4.5, [color(stop).rgb]);
+  });
+});
+
 check('баннер предупреждения читается', () => {
   const rule = css.match(/\.banner\s*\{([^}]*)\}/);
   const ink = rule[1].match(/color:\s*(#[0-9A-Fa-f]{6})/);

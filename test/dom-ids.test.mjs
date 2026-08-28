@@ -90,5 +90,17 @@ check('каждый ключ строк, который читает код, е�
   console.log('         сверено ключей: ' + used.size + ' из ' + keys.size + ' объявленных');
 });
 
+check('сырые английские имена типов заданий не выводятся в интерфейс', () => {
+  // `item.kind` — это scramble/gapfill/transform/fix, значение схемы. Русская
+  // инструкция для каждого типа уже есть в i18n; вывод самого значения показывал
+  // рядом два обозначения одного и того же, одно из них на чужом языке.
+  const ui = readFileSync(join(app, 'grammar-ui.js'), 'utf8');
+  const leaks = [...ui.matchAll(/textContent\s*=\s*[^;\n]*\bitem\.kind\b/g)]
+    .concat([...ui.matchAll(/innerHTML\s*=\s*[^;\n]*\bitem\.kind\b/g)]);
+  assert(leaks.length === 0,
+    'item.kind выводится напрямую: ' + leaks.map(m => m[0]).join(' | '));
+  assert(/kindInstruction/.test(ui), 'русские инструкции по типам должны использоваться');
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) process.exit(1);

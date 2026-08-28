@@ -126,7 +126,6 @@
     if (url) { label.setAttribute('href', url); label.classList.remove('tag-flat'); }
     else { label.removeAttribute('href'); label.classList.add('tag-flat'); }
     el('g-title').textContent = p.title_ru || '';
-    el('g-kind').textContent = item.kind;
 
     el('g-instruction').textContent = retry
       ? T.retryLabel : kindInstruction(item.kind);

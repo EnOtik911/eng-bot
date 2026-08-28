@@ -2,8 +2,8 @@
  * Визуальная система: тёмная база, живой градиентный фон, два стеклянных слоя.
  *
  * Решения, продиктованные замерами, а не вкусом:
- *  - backdrop-filter стоит на ТРЁХ элементах (карточка, верхняя панель, плитка
- *    главного экрана).
+ *  - backdrop-filter стоит на ЧЕТЫРЁХ элементах: карточка, верхняя панель, плитка
+ *    главного экрана, строка шаблона в списке. Бюджет — пять, запас оставлен.
  *    Каждое стекло — отдельный расчёт блюра на GPU; 10+ роняют кадры на среднем
  *    телефоне, 3–5 безопасны. Кнопки оценок сделаны не стеклом, а тонированными.
  *  - блюр 18px и больше нигде не анимируется: анимация blur пересчитывает растр
@@ -23,14 +23,30 @@
   --bg-1: #F7F9FC;
   --fg: #0E1526;
   --fg-dim: #46536B;
-  --fg-faint: #5A6780;
+  /* 4.70:1 на самом насыщенном участке фона. Значение подобрано вычислением
+     против того же фона, что считает contrast-тест: после того как стекло стало
+     прозрачнее, прежний #5A6780 давал 4.49 и норму не держал. */
+  --fg-faint: #57647C;
 
   /* Стекло на светлой базе — белое полупрозрачное. Это тот самый воздушный
      материал: на тёмной базе он был бы тёмным, там белый роняет контраст. */
-  --glass-fill: rgba(255, 255, 255, .62);
-  --glass-fill-strong: rgba(255, 255, 255, .82);
+  /* Прозрачнее — больше цвета проходит снизу и стекло читается как стекло.
+     Ниже .55 текст на самом насыщенном участке фона перестаёт держать 4.5:1;
+     это проверено contrast-тестом, а не подобрано на глаз. */
+  --glass-fill: rgba(255, 255, 255, .56);
+  --glass-fill-strong: rgba(255, 255, 255, .74);
   --glass-edge: rgba(255, 255, 255, .95);
   --glass-blur: 18px;
+  /* saturate — это и есть «преломление» в CSS: цвет снизу проходит усиленным.
+     brightness чуть отделяет стекло от фона, не осветляя текст. */
+  --glass-fx: blur(var(--glass-blur)) saturate(200%) brightness(1.03);
+  /* Внутренняя кромка: белый блик сверху, холодная тень снизу — так стекло
+     получает толщину. Одна тень вместо трёх слоёв разметки. */
+  --glass-inset:
+    inset 0 1px 0 rgba(255, 255, 255, .96),
+    inset 0 -1px 0 rgba(94, 118, 214, .22),
+    inset 1px 0 0 rgba(255, 255, 255, .5),
+    inset -1px 0 0 rgba(94, 118, 214, .12);
 
   --accent: #3566EA;
   --accent-2: #6E4CF0;
@@ -93,7 +109,7 @@ body {
   display: block;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: .55;
+  opacity: .7;
   will-change: transform;
 }
 .aurora span:nth-child(1) {
@@ -126,8 +142,8 @@ body {
   gap: var(--s2);
   padding: 10px var(--s3);
   background: rgba(255, 255, 255, .58);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
-  backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+  -webkit-backdrop-filter: var(--glass-fx);
+  backdrop-filter: var(--glass-fx);
   border-bottom: 1px solid rgba(14, 21, 38, .07);
 }
 
@@ -187,8 +203,8 @@ body {
   padding: var(--s4) var(--s3) var(--s3);
   border-radius: var(--r-lg);
   background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
-  backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+  -webkit-backdrop-filter: var(--glass-fx);
+  backdrop-filter: var(--glass-fx);
   border: 1px solid var(--glass-edge);
   box-shadow:
     0 24px 56px -20px rgba(24, 38, 78, .28),
@@ -211,8 +227,14 @@ body {
 
 /* если backdrop-filter не поддержан — не прозрачное ничто, а плотная подложка */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .card { background: rgba(255, 255, 255, .97); }
-  .topbar { background: rgba(255, 255, 255, .97); }
+  /* Каждое стекло обязано быть здесь. Без поддержки backdrop-filter полупрозрачная
+     заливка не размывает фон, а просто пропускает его — контур самолёта и кольца
+     оказались бы прямо под текстом. Перечислять придётся вручную, поэтому список
+     сверяется тестом со списком стёкол. */
+  .card,
+  .topbar,
+  .tile,
+  .pattern-row { background: rgba(255, 255, 255, .97); }
 }
 
 .card.card-leaving { animation: card-out var(--fast) var(--ease) both; }
@@ -419,7 +441,7 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
-  .aurora span { animation: none; }
+  .aurora span, .decor svg { animation: none; }
 }
 
 /* ===========================================================================
@@ -444,8 +466,10 @@ body {
 .g-back:active { transform: scale(.9); }
 
 .home-title {
-  font-size: 26px;
-  letter-spacing: -.02em;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  color: var(--fg);
   margin: 0 0 var(--s3);
 }
 
@@ -462,10 +486,10 @@ body {
   padding: var(--s3);
   border-radius: var(--r-lg);
   background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
-  backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+  -webkit-backdrop-filter: var(--glass-fx);
+  backdrop-filter: var(--glass-fx);
   border: 1px solid var(--glass-edge);
-  box-shadow: 0 10px 30px rgba(16, 26, 51, .07);
+  box-shadow: var(--glass-inset), 0 14px 36px -12px rgba(16, 26, 51, .18);
   cursor: pointer;
   transition: transform var(--fast) var(--ease);
 }
@@ -474,9 +498,9 @@ body {
 .tile-wide { width: 100%; }
 
 .tile-name {
-  font-size: 20px;
-  font-weight: 640;
-  letter-spacing: -.01em;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -.015em;
   color: var(--fg);
 }
 .tile-sub { font-size: 14px; color: var(--fg-dim); }
@@ -501,15 +525,20 @@ body {
   text-align: left;
   padding: 14px var(--s2);
   border-radius: var(--r-md);
-  border: 1px solid rgba(16, 26, 51, .08);
-  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-edge);
+  /* Четвёртое и последнее стекло. Список шаблонов занимает весь экран, поэтому
+     именно на нём стекло видно дольше всего — здесь оно и оправдано. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-fx);
+  backdrop-filter: var(--glass-fx);
+  box-shadow: var(--glass-inset), 0 6px 18px -8px rgba(16, 26, 51, .16);
   cursor: pointer;
   transition: transform var(--fast) var(--ease);
 }
 .pattern-row:active { transform: scale(.99); }
 
 .pattern-main { display: grid; gap: 2px; min-width: 0; }
-.pattern-label { font-size: 15px; font-weight: 600; color: var(--fg); }
+.pattern-label { font-size: 15px; font-weight: 680; color: var(--fg); letter-spacing: -.01em; }
 .pattern-title { font-size: 13px; color: var(--fg-dim); }
 .pattern-meta { display: grid; gap: 4px; justify-items: end; flex: 0 0 auto; }
 .pattern-pool { font-size: 11px; color: var(--fg-faint); }
@@ -620,3 +649,61 @@ body {
 
 .tag-flat { background: rgba(16, 26, 51, .06); color: var(--fg-dim); }
 a.tag-accent { text-decoration: none; }
+
+/* ===========================================================================
+   Слой фигур под стеклом.
+
+   Резкий контур здесь — не украшение, а условие: backdrop-filter смазывает край,
+   и без края смазывать нечего. Размытое пятно под размывающим стеклом даёт ровно
+   то же размытое пятно, поэтому стекло на нём не читается.
+
+   Фигуры двигаются только по transform и не участвуют ни в одном переходе.
+   ========================================================================= */
+
+.decor {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.decor svg {
+  position: absolute;
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  will-change: transform;
+}
+
+.decor-plane {
+  width: 46vmax;
+  height: 46vmax;
+  right: -8vmax;
+  top: 6vmax;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  opacity: .22;
+  transform: rotate(-8deg);
+  animation: glide 26s var(--ease) infinite alternate;
+}
+
+.decor-rings {
+  width: 62vmax;
+  left: -10vmax;
+  bottom: 4vmax;
+  stroke: var(--accent-2);
+  stroke-width: 1.1;
+  opacity: .2;
+  animation: roll 34s var(--ease) infinite alternate;
+}
+
+@keyframes glide {
+  from { transform: translate3d(0, 0, 0) rotate(-8deg); }
+  to   { transform: translate3d(-4vmax, 5vmax, 0) rotate(-2deg); }
+}
+
+@keyframes roll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(5vmax, -3vmax, 0); }
+}
