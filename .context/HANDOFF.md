@@ -17,7 +17,7 @@ sequencing decision was taken on evidence rather than referred back.
 | 4 | `gas/GrammarImport.gs` validator + rollback | VERIFIED |
 | 5 | Corpus: 8 patterns x 12 items x 4 kinds = 96 | VERIFIED |
 | 6 | Client: `answer.js`, `grammar.js`, `grammar-ui.js`, home screen, picker | VERIFIED |
-| 7 | Tests: 5 new suites, 61 new assertions; red-then-green demonstrated for each | VERIFIED |
+| 7 | Tests: 6 new suites, 69 new assertions; red-then-green demonstrated for each | VERIFIED |
 | 8 | Docs: spec, grammar map, generation prompt, user guide, ADR-04 | VERIFIED |
 | 9 | Deploy | BLOCKED on owner |
 
@@ -46,7 +46,11 @@ sequencing decision was taken on evidence rather than referred back.
 
 ## Verification evidence (by reference)
 
-- full suite: `./test/run-all.sh` — 14 suites, 137 assertions, all green
+- full suite: `./test/run-all.sh` — 15 suites, 145 assertions, all green
+- `test/grammar-e2e.test.mjs` closes the gap between the two halves: the real corpus goes
+  through the real validator, the real scheduler, the real client checker and the real
+  flush, with only Sheets stubbed. Client suites use hand-written payloads, so a shape
+  mismatch between server and client would have surfaced only in the app
 - `test/dom-ids.test.mjs` closes a gap no other suite covered: a typo in an element id
   passes syntax checking and logic tests, then blanks the app silently at runtime. It
   also caught one dangling i18n key (`theoryLink`) that was declared and never wired
@@ -65,8 +69,12 @@ sequencing decision was taken on evidence rather than referred back.
 
 1. `cd gas && clasp push -f`, then Deploy -> Manage deployments -> edit -> New version.
    A push alone does not change what `/exec` serves.
-2. `git push` — the Pages client. Safe to do before step 1: the home screen degrades to
-   "Грамматика ещё не залита" and vocabulary keeps working.
+2. DONE — client pushed and live on Pages at v0.6.0 (probed: answer.js, grammar.js,
+   grammar-ui.js all 200). The live backend still answers
+   `{"ok":false,"code":"BAD_REQUEST","message":"unknown action: grammar"}`, which is the
+   non-fatal branch, so the home screen shows grammar unavailable and vocabulary works.
+   That path is traced in code and the backend response confirmed by curl, but it has
+   NOT been exercised in a browser.
 3. In the sheet: menu -> «Первичная настройка листов», then «Засеять грамматику», then
    «Импортировать грамматику». Expected: 8 rows in `patterns`, 96 in `grammar_items`,
    0 on `grammar_rejects`.
