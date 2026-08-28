@@ -584,16 +584,36 @@ function diagInitData(initData) {
   out.checks.user_in_allowlist = uid ? allow.indexOf(uid) >= 0 : false;
 
   if (token && data.hash) {
-    var keys = Object.keys(data).filter(function (k) {
-      return k !== 'hash' && k !== 'signature';
-    }).sort();
-    var checkString = keys.map(function (k) { return k + '=' + data[k]; }).join('\n');
+    // Перебор кандидатов, а не догадка: какая именно строка подписывается.
+    // Telegram добавил поле signature, и неясно, входит ли оно в hash; плюс
+    // остаётся вопрос, берутся значения декодированными или как пришли.
+    var raw = {};
+    initData.split('&').forEach(function (p) {
+      var eq = p.indexOf('=');
+      if (eq >= 0) raw[decodeURIComponent(p.slice(0, eq))] = p.slice(eq + 1);
+    });
+
     var secret = hmacBytes_(Utilities.newBlob('WebAppData').getBytes(), token);
-    var expected = hmacHex_(secret, checkString);
+    var variants = [
+      { name: 'decoded, без signature', src: data, drop: ['hash', 'signature'] },
+      { name: 'decoded, с signature',   src: data, drop: ['hash'] },
+      { name: 'raw, без signature',     src: raw,  drop: ['hash', 'signature'] },
+      { name: 'raw, с signature',       src: raw,  drop: ['hash'] }
+    ];
+
     out.checks.hash_received_head = data.hash.slice(0, 8);
-    out.checks.hash_expected_head = expected.slice(0, 8);
-    out.checks.hash_matches = constantTimeEquals_(expected, data.hash);
-    out.checks.check_string_fields = keys;
+    out.checks.hash_variants = {};
+    var matched = null;
+    variants.forEach(function (v) {
+      var keys = Object.keys(v.src).filter(function (k) { return v.drop.indexOf(k) < 0; }).sort();
+      var cs = keys.map(function (k) { return k + '=' + v.src[k]; }).join('\n');
+      var got = hmacHex_(secret, cs);
+      var ok = constantTimeEquals_(got, data.hash);
+      out.checks.hash_variants[v.name] = { head: got.slice(0, 8), matches: ok, fields: keys };
+      if (ok && !matched) matched = v.name;
+    });
+    out.checks.hash_matching_variant = matched;
+    out.checks.hash_matches = !!matched;
   }
 
   var verdict = verifyInitData(initData);
@@ -606,9 +626,12 @@ function diagInitData(initData) {
       '/revoke, а новый в свойства не положили. Возьми текущий токен у BotFather ' +
       'и замени BOT_TOKEN.';
   } else if (out.checks.hash_matches === false) {
-    out.hint = 'Токен рабочий, но хеш не сошёлся: приложение открыто из другого бота, ' +
-      'чем тот, чей токен в свойствах. Сверь bot_username ниже с ботом, из которого ' +
-      'открываешь приложение.';
+    out.hint = 'Токен рабочий, но ни один из четырёх вариантов построения строки не сошёлся. ' +
+      'Значит дело не в поле signature и не в кодировании значений. Пришли этот вывод целиком.';
+  } else if (out.checks.hash_matching_variant &&
+             out.checks.hash_matching_variant !== 'decoded, без signature') {
+    out.hint = 'Сходится вариант "' + out.checks.hash_matching_variant + '", а код использует ' +
+      '"decoded, без signature". Именно это и надо поправить в verifyInitData.';
   } else if (out.checks.user_in_allowlist === false && uid) {
     out.hint = 'Подпись верна, но user_id ' + uid + ' не в ALLOWLIST. Добавь его в свойства.';
   }
@@ -1084,7 +1107,25 @@ function setWebhook() {
   Logger.log(JSON.stringify(res));
 }
 
+/**
+ * Дедуп апдейтов Telegram.
+ *
+ * Apps Script на POST отвечает редиректом 302, и Telegram считает это неуспехом,
+ * поэтому повторяет доставку того же update_id — один /start превращается в пять
+ * одинаковых ответов. Идемпотентность по update_id решает это тем же приёмом,
+ * что и batch_id для отправки оценок.
+ */
+function updateSeen_(updateId) {
+  if (!updateId) return false;
+  var cache = CacheService.getScriptCache();
+  var key = 'upd_' + updateId;
+  if (cache.get(key)) return true;
+  cache.put(key, '1', 3600);   // час с запасом: повторы приходят в течение минут
+  return false;
+}
+
 function handleBotUpdate_(update) {
+  if (updateSeen_(update.update_id)) return;   // повторная доставка того же апдейта
   var msg = update.message;
   if (!msg || !msg.text) return;
   var userId = String(msg.from && msg.from.id);

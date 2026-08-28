@@ -87,7 +87,25 @@ function setWebhook() {
   Logger.log(JSON.stringify(res));
 }
 
+/**
+ * Дедуп апдейтов Telegram.
+ *
+ * Apps Script на POST отвечает редиректом 302, и Telegram считает это неуспехом,
+ * поэтому повторяет доставку того же update_id — один /start превращается в пять
+ * одинаковых ответов. Идемпотентность по update_id решает это тем же приёмом,
+ * что и batch_id для отправки оценок.
+ */
+function updateSeen_(updateId) {
+  if (!updateId) return false;
+  var cache = CacheService.getScriptCache();
+  var key = 'upd_' + updateId;
+  if (cache.get(key)) return true;
+  cache.put(key, '1', 3600);   // час с запасом: повторы приходят в течение минут
+  return false;
+}
+
 function handleBotUpdate_(update) {
+  if (updateSeen_(update.update_id)) return;   // повторная доставка того же апдейта
   var msg = update.message;
   if (!msg || !msg.text) return;
   var userId = String(msg.from && msg.from.id);
