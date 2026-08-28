@@ -1,4 +1,12 @@
-/** Checks data/*.tsv against the importer's rules: node test/import-format.test.mjs */
+/**
+ * Checks every data/*.tsv against the rules of ITS OWN importer:
+ *   node test/import-format.test.mjs
+ *
+ * Two schemas live in data/ now, so the file is routed by its header. Routing rather
+ * than skipping is deliberate: a suite that skips files it does not recognise would
+ * let a new corpus sit unchecked, which is worse than the false failure that made this
+ * necessary. An unrecognised header is a failure, not a pass.
+ */
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -54,14 +62,68 @@ check('the match rule accepts the variation it was loosened for', () => {
     'plural must pass');
 });
 
+// Грамматический корпус проверяется своим валидатором — тем же, что и импорт.
+const gscope = {};
+new Function('sheet_', 'makeId_', 'exports',
+  readFileSync(join(here, '..', 'gas', 'Config.gs'), 'utf8') + '\n' +
+  readFileSync(join(here, '..', 'gas', 'GrammarImport.gs'), 'utf8') +
+  '\nObject.assign(exports, {validateGrammarRow_, grammarItemKey_, GRAMMAR_IMPORT_COLUMNS});'
+)(() => { throw new Error('sheet_ must not be called'); }, () => 'x', gscope);
+const GRAMMAR_COLUMNS = gscope.GRAMMAR_IMPORT_COLUMNS;
+
 const files = readdirSync(dataDir).filter(f => f.endsWith('.tsv'));
 console.log('Import format (' + files.length + ' file(s))');
+
+const vocabFiles = [];
+const grammarFiles = [];
 
 for (const file of files) {
   const text = readFileSync(join(dataDir, file), 'utf8');
   const lines = text.split('\n').filter(l => l.length > 0);
   const header = lines[0].split('\t');
   const rows = lines.slice(1).map((l, i) => ({ line: i + 2, cells: l.split('\t') }));
+  const isVocab = header.join('\t') === COLUMNS.join('\t');
+  const isGrammar = header.join('\t') === GRAMMAR_COLUMNS.join('\t');
+
+  check(file + ': header matches a known schema', () => {
+    assert(isVocab || isGrammar,
+      'заголовок не совпадает ни с лексической схемой, ни с грамматической.\n' +
+      '         получено:   ' + header.join(', ') + '\n' +
+      '         лексика:    ' + COLUMNS.join(', ') + '\n' +
+      '         грамматика: ' + GRAMMAR_COLUMNS.join(', '));
+  });
+
+  if (isGrammar) {
+    grammarFiles.push(file);
+
+    check(file + ': every row has exactly ' + GRAMMAR_COLUMNS.length + ' cells', () => {
+      rows.forEach(r => assert(r.cells.length === GRAMMAR_COLUMNS.length,
+        `line ${r.line}: ${r.cells.length} cells`));
+    });
+
+    check(file + ': every row passes the real grammar import validator', () => {
+      rows.forEach(r => {
+        const v = gscope.validateGrammarRow_(r.cells);
+        assert(!v.error, `line ${r.line}: ${v.error}`);
+      });
+    });
+
+    check(file + ': no duplicate exercises', () => {
+      const seen = new Map();
+      rows.forEach(r => {
+        const v = gscope.validateGrammarRow_(r.cells);
+        if (v.error) return;
+        const k = gscope.grammarItemKey_(v.row);
+        assert(!seen.has(k), `line ${r.line} duplicates line ${seen.get(k)}`);
+        seen.set(k, r.line);
+      });
+    });
+
+    continue;
+  }
+
+  if (!isVocab) continue;
+  vocabFiles.push(file);
 
   check(file + ': header matches IMPORT_COLUMNS', () => {
     assert(header.length === COLUMNS.length, `${header.length} columns, expected ${COLUMNS.length}`);
@@ -116,6 +178,14 @@ for (const file of files) {
     assert(share >= 0.7, `only ${(share * 100).toFixed(0)}% multi-word — the unit of a card is a chunk, not a word`);
   });
 }
+
+check('every TSV in data/ was routed to a validator', () => {
+  const routed = vocabFiles.length + grammarFiles.length;
+  assert(routed === files.length,
+    `файлов ${files.length}, проверено ${routed} — какой-то остался без валидатора`);
+  console.log('         лексика: ' + (vocabFiles.join(', ') || '—'));
+  console.log('         грамматика: ' + (grammarFiles.join(', ') || '—'));
+});
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) process.exit(1);

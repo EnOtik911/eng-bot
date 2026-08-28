@@ -46,7 +46,13 @@ sequencing decision was taken on evidence rather than referred back.
 
 ## Verification evidence (by reference)
 
-- full suite: `./test/run-all.sh` — 15 suites, 145 assertions, all green
+- full suite: `./test/run-all.sh` — 15 suites, 151 assertions, all green
+- one push in this task landed with `import-format.test.mjs` red: it globs every
+  data/*.tsv and applied the vocabulary rules to the new grammar corpus. Fixed by
+  routing files by header to the matching validator, with an assertion that every file
+  in data/ WAS routed — skipping unrecognised files would leave a new corpus unchecked,
+  which is worse than the false failure. Demonstrated red on an unknown header and on a
+  corrupted grammar row.
 - `test/grammar-e2e.test.mjs` closes the gap between the two halves: the real corpus goes
   through the real validator, the real scheduler, the real client checker and the real
   flush, with only Sheets stubbed. Client suites use hand-written payloads, so a shape
