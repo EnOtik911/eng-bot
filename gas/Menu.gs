@@ -25,6 +25,7 @@ function onOpenMenu(e) {
     .addItem('Первичная настройка листов', 'setupSpreadsheet')
     .addItem('Засеять стартовый батч', 'seedStarterBatch')
     .addItem('Засеять грамматику', 'seedGrammarBatch')
+    .addItem('Залить весь банк слов из репозитория', 'menuLoadEverything')
     .addItem('Самопроверка конфигурации', 'menuSelfCheck')
     .addItem('Полная диагностика', 'menuDiagnostics')
     .addToUi();
@@ -177,4 +178,20 @@ function menuDiagnostics() {
   // Диалог обрезает длинный текст, поэтому полная версия остаётся в журнале.
   ui.alert('Диагностика', report.slice(0, 1400) +
     (report.length > 1400 ? '\n\n… полностью — в журнале выполнения' : ''), ui.ButtonSet.OK);
+}
+
+function menuLoadEverything() {
+  var ui = SpreadsheetApp.getUi();
+  var answer = ui.alert('Залить весь банк',
+    'Будет выставлена дневная норма 10 и залиты все батчи из репозитория.\n' +
+    'Повторный запуск безопасен: дубликаты отклоняются, а не дублируются.\n\nПродолжить?',
+    ui.ButtonSet.YES_NO);
+  if (answer !== ui.Button.YES) return;
+  try {
+    var report = loadEverything();
+    ui.alert('Готово', report.slice(0, 1400) +
+      (report.length > 1400 ? '\n\n… полностью — в журнале выполнения' : ''), ui.ButtonSet.OK);
+  } catch (e) {
+    ui.alert('Не выполнено', String(e.message), ui.ButtonSet.OK);
+  }
 }

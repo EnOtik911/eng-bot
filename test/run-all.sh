@@ -28,7 +28,7 @@ process.exit(bad?1:0);' || fail=1
 echo
 
 for t in test/fsrs.test.mjs test/session.test.mjs test/auth.test.mjs \
-         test/import-format.test.mjs test/session-server.test.mjs \
+         test/import-format.test.mjs test/bank-load.test.mjs test/session-server.test.mjs \
          test/answer.test.mjs test/grammar-client.test.mjs \
          test/grammar-server.test.mjs test/grammar-import.test.mjs test/grammar-e2e.test.mjs \
          test/dom-ids.test.mjs test/css-hidden.test.mjs test/theme.test.mjs test/contrast.test.mjs test/css-perf.test.mjs \

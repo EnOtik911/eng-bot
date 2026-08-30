@@ -103,6 +103,31 @@ so the keyboard cannot hide «Проверить».
    and "fixing" a plane that had already been redrawn. The harness is now rebuilt by one
    script that asserts its decor markup matches the repository.
 
+## T-009 — daily ping, vocabulary bank, one-click load (2026-08-30)
+
+Owner reported two days with no notification and no due work, then asked for a much
+larger vocabulary bank aimed at everyday conversation plus IT systems/business analyst
+work in FINTECH, and finally asked me to load it and raise the limit myself.
+
+Silence had three causes, all fixed: dailyPing counted only vocabulary so grammar could
+never remind him of itself; it returned early when nothing was due, making "free today"
+indistinguishable from "the trigger is dead"; and session-server.test.mjs hardcoded a
+date and passed on exactly one calendar day, failing on the 30th. gas/Diagnose.gs now
+answers all five possible causes in one command, and test/timetravel.mjs re-runs every
+suite at +1/+14/+180 days.
+
+Bank: 303 units, six layers, 80% collocations and phrases. Grounded in
+.context/research-vocab.md (39 sources) — formulaic sequences are 58.6% of spoken
+discourse and their use correlates with judged fluency independent of vocabulary size,
+so the `social` layer carries the goal, not the domain layers.
+
+Loading: I could NOT run functions in his Apps Script project. clasp run-function
+returns NOT_FOUND because scripts.run needs a standard GCP project linked to the script,
+and creating one on his Google account unasked is out of proportion to saving eight
+clicks. Instead gas/BankLoad.gs fetches the batches over UrlFetch from his own public
+repo and loadEverything() does the whole thing in one run. That also avoids a second
+copy of the corpus: data/*.tsv stays the only source, validated by the test suite.
+
 ## Settled decisions (do not re-litigate)
 
 - FSRS state on the PATTERN, sentences drawn from a pool — scheduling the sentence
@@ -132,6 +157,12 @@ so the keyboard cannot hide «Проверить».
   under blur refracts nothing — `app/styles.css`
 - `item.kind` is a schema value and never reaches the screen; the Russian per-kind
   instruction is the only label — `test/dom-ids.test.mjs`
+- The bank lives in data/*.tsv only. BankLoad.gs fetches it over HTTP rather than
+  embedding a copy, so the corpus keeps exactly one source that the tests validate —
+  `gas/BankLoad.gs`, `test/bank-load.test.mjs`
+- daily_new_target 10, not 6: measured on the project's own load model — ~95 reviews
+  and ~13 min/day, reaching the lower bound of the contested 2,000-3,000 family
+  milestone in six months — `test/load-model.mjs`
 - No animation library. The two capabilities libraries sell here — spring easing and
   FLIP — are `linear()` and `element.animate()`, both verified in WebKit and Chromium.
   A CDN script would also break offline-first — `app/styles.css`, `app/grammar-ui.js`
