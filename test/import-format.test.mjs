@@ -185,6 +185,26 @@ for (const file of files) {
   });
 }
 
+check('единица не повторяется МЕЖДУ файлами, а не только внутри', () => {
+  // Проверка дублей внутри файла ничего не говорит про повторы между батчами, а
+  // импортёр дедуплицирует глобально: такая строка молча уходит в rejects и выглядит
+  // в отчёте как ошибка генерации. Семь таких нашлось при первой же сборке банка.
+  const seen = new Map();
+  const dup = [];
+  for (const file of vocabFiles) {
+    const lines = readFileSync(join(dataDir, file), 'utf8').split('\n').filter(l => l.length > 0);
+    lines.slice(1).forEach((l, i) => {
+      const en = norm(l.split('\t')[1]);
+      if (!en) return;
+      if (seen.has(en)) dup.push('"' + l.split('\t')[1] + '" — ' + file + ':' + (i + 2) +
+        ' повторяет ' + seen.get(en));
+      else seen.set(en, file + ':' + (i + 2));
+    });
+  }
+  assert(dup.length === 0, 'повторы между файлами:\n         ' + dup.join('\n         '));
+  console.log('         единиц в банке всего: ' + seen.size);
+});
+
 check('every TSV in data/ was routed to a validator', () => {
   const routed = vocabFiles.length + grammarFiles.length;
   assert(routed === files.length,

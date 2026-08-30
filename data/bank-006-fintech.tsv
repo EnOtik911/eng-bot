@@ -1,0 +1,66 @@
+type	en	ru	example_en	example_ru	layer	topic	note
+collocation	an issuing bank	банк-эмитент	The issuing bank declined the transaction.	Банк-эмитент отклонил транзакцию.	fintech	cards	эмитент выпускает карту держателю
+collocation	an acquiring bank	банк-эквайер	The acquiring bank serves the merchant.	Банк-эквайер обслуживает торговую точку.	fintech	cards	эквайер принимает платежи за мерчанта
+collocation	a card scheme	платёжная система	Visa is a card scheme, not a bank.	Visa это платёжная система, а не банк.	fintech	cards	
+collocation	a payment processor	процессинг	The payment processor routes the request.	Процессинг маршрутизирует запрос.	fintech	cards	
+collocation	a merchant of record	юридический продавец	The merchant of record carries the liability.	Юридический продавец несёт ответственность.	fintech	cards	
+collocation	an authorisation request	запрос авторизации	The authorisation request timed out.	Запрос авторизации истёк по времени.	fintech	cards	авторизация только резервирует сумму
+collocation	an authorisation hold	холд по авторизации	The authorisation hold expires in seven days.	Холд по авторизации истекает через семь дней.	fintech	cards	
+collocation	capture a payment	списать заблокированную сумму	We capture the payment when the order ships.	Мы списываем сумму при отгрузке заказа.	fintech	cards	capture превращает холд в списание
+collocation	void a transaction	отменить до расчёта	Void the transaction before settlement.	Отмени транзакцию до расчёта.	fintech	cards	
+collocation	settlement of funds	расчёт по средствам	Settlement of funds happens the next business day.	Расчёт по средствам происходит на следующий рабочий день.	fintech	cards	
+collocation	a settlement file	файл расчётов	The settlement file arrives at two in the morning.	Файл расчётов приходит в два ночи.	fintech	cards	
+collocation	clearing and settlement	клиринг и расчёты	Clearing and settlement run on separate cycles.	Клиринг и расчёты идут разными циклами.	fintech	cards	клиринг считает, расчёт двигает деньги
+collocation	an interchange fee	интерчейндж	The interchange fee goes to the issuer.	Интерчейндж уходит эмитенту.	fintech	cards	
+collocation	a scheme fee	комиссия платёжной системы	Scheme fees are separate from interchange.	Комиссии платёжной системы отдельны от интерчейнджа.	fintech	cards	
+collocation	a merchant discount rate	ставка торговой уступки	The merchant discount rate covers all three fees.	Ставка торговой уступки покрывает все три комиссии.	fintech	cards	
+collocation	a chargeback	чарджбэк	One chargeback can cost more than the sale.	Один чарджбэк может стоить дороже продажи.	fintech	disputes	
+collocation	raise a dispute	открыть диспут	The cardholder raised a dispute after a month.	Держатель карты открыл диспут через месяц.	fintech	disputes	
+collocation	represent a chargeback	оспорить чарджбэк	We represent the chargeback with delivery proof.	Мы оспариваем чарджбэк доказательством доставки.	fintech	disputes	
+collocation	a chargeback reason code	код причины чарджбэка	This chargeback reason code means goods not received.	Этот код причины чарджбэка значит товар не получен.	fintech	disputes	
+collocation	liability shift	перенос ответственности	Three domain secure triggers liability shift.	Три-D Secure запускает перенос ответственности.	fintech	disputes	
+collocation	a refund	возврат	A refund is not the same as a chargeback.	Возврат это не то же самое, что чарджбэк.	fintech	disputes	
+collocation	three domain secure	технология 3-D Secure	Three domain secure adds a challenge step.	Три-D Secure добавляет шаг подтверждения.	fintech	security	бренды: Visa Secure, Mastercard Identity Check
+collocation	card tokenisation	токенизация карты	Card tokenisation replaces the number with a token.	Токенизация карты заменяет номер токеном.	fintech	security	
+collocation	a payment token	платёжный токен	The payment token is useless outside our shop.	Платёжный токен бесполезен вне нашего магазина.	fintech	security	
+collocation	cardholder data	данные держателя карты	Cardholder data never touches our servers.	Данные держателя карты не попадают на наши серверы.	fintech	security	
+collocation	reduce scope for compliance	сузить границы соответствия	Tokenisation reduces our scope for compliance.	Токенизация сужает наши границы соответствия.	fintech	security	
+collocation	a ledger entry	проводка в реестре	Every payment creates one ledger entry per side.	Каждый платёж создаёт по одной проводке в реестре на каждую сторону.	fintech	ledger	
+collocation	double entry bookkeeping	двойная запись	Double entry bookkeeping keeps the ledger balanced.	Двойная запись держит реестр сбалансированным.	fintech	ledger	
+collocation	post a transaction	провести транзакцию	We post the transaction at end of day.	Мы проводим транзакцию в конце дня.	fintech	ledger	
+collocation	a pending transaction	незавершённая операция	A pending transaction is not yet posted.	Незавершённая операция ещё не проведена.	fintech	ledger	
+collocation	reconcile accounts	сверять счета	We reconcile accounts against the settlement file.	Мы сверяем счета с файлом расчётов.	fintech	ledger	
+collocation	a reconciliation break	расхождение при сверке	One reconciliation break took two days to find.	Одно расхождение при сверке искали два дня.	fintech	ledger	
+collocation	an available balance	доступный остаток	The available balance excludes pending holds.	Доступный остаток не включает холды.	fintech	ledger	
+collocation	funds availability	доступность средств	Funds availability depends on the payment rail.	Доступность средств зависит от платёжного канала.	fintech	ledger	
+collocation	a nostro account	счёт ностро	Our nostro account sits with the correspondent bank.	Наш счёт ностро лежит в банке-корреспонденте.	fintech	ledger	ностро: наш счёт у них
+collocation	a vostro account	счёт востро	A vostro account is their money held by us.	Счёт востро это их деньги у нас.	fintech	ledger	востро: их счёт у нас
+collocation	a suspense account	счёт невыясненных сумм	Unmatched payments land in a suspense account.	Несопоставленные платежи попадают на счёт невыясненных сумм.	fintech	ledger	
+collocation	know your customer	идентификация клиента	Know your customer checks run before the first payment.	Проверки идентификации клиента идут до первого платежа.	fintech	compliance	
+collocation	anti money laundering	противодействие отмыванию	Anti money laundering rules drive the reporting.	Правила противодействия отмыванию определяют отчётность.	fintech	compliance	
+collocation	sanctions screening	проверка по санкционным спискам	Sanctions screening blocks the payment instantly.	Проверка по санкционным спискам блокирует платёж мгновенно.	fintech	compliance	
+collocation	a false positive	ложное срабатывание	Most sanctions alerts are a false positive.	Большинство санкционных срабатываний ложные.	fintech	compliance	
+collocation	enhanced due diligence	углублённая проверка	High risk clients need enhanced due diligence.	Клиентам высокого риска нужна углублённая проверка.	fintech	compliance	
+collocation	a suspicious activity report	сообщение о подозрительной операции	Compliance filed a suspicious activity report.	Комплаенс подал сообщение о подозрительной операции.	fintech	compliance	
+collocation	an audit trail	журнал аудита	The audit trail must survive seven years.	Журнал аудита должен храниться семь лет.	fintech	compliance	
+collocation	strong customer authentication	усиленная аутентификация клиента	Strong customer authentication needs two factors.	Усиленная аутентификация клиента требует двух факторов.	fintech	compliance	требование PSD2 в ЕС
+collocation	an exemption from authentication	исключение из аутентификации	Low value payments claim an exemption from authentication.	Мелкие платежи заявляют исключение из аутентификации.	fintech	compliance	
+collocation	open banking	открытый банкинг	Open banking lets a third party read the balance.	Открытый банкинг позволяет третьей стороне видеть остаток.	fintech	rails	
+collocation	a payment rail	платёжный канал	Choosing the payment rail decides the settlement time.	Выбор платёжного канала определяет время расчёта.	fintech	rails	
+collocation	a wire transfer	банковский перевод	A wire transfer settles the same day.	Банковский перевод рассчитывается в тот же день.	fintech	rails	
+collocation	a direct debit	прямое списание	A direct debit pulls money on a schedule.	Прямое списание снимает деньги по расписанию.	fintech	rails	
+collocation	instant payments	мгновенные платежи	Instant payments settle in under ten seconds.	Мгновенные платежи проходят меньше чем за десять секунд.	fintech	rails	
+collocation	a payment initiation	инициирование платежа	Payment initiation moved to the bank application.	Инициирование платежа переехало в приложение банка.	fintech	rails	
+collocation	a virtual account	виртуальный счёт	Each client gets a virtual account number.	Каждый клиент получает номер виртуального счёта.	fintech	rails	термин отраслевой, единого определения нет
+collocation	buy now pay later	оплата частями	Buy now pay later shifts credit risk to the provider.	Оплата частями переносит кредитный риск на провайдера.	fintech	rails	у регуляторов нет единого определения
+collocation	a payment gateway	платёжный шлюз	The payment gateway forwards the request to the processor.	Платёжный шлюз передаёт запрос в процессинг.	fintech	rails	
+collocation	a decline rate	доля отказов	Our decline rate rose after the rule change.	Наша доля отказов выросла после изменения правил.	fintech	metrics	
+collocation	an approval rate	доля одобрений	A one point approval rate gain pays for the project.	Один пункт доли одобрений окупает проект.	fintech	metrics	
+collocation	a soft decline	мягкий отказ	A soft decline can be retried with authentication.	Мягкий отказ можно повторить с аутентификацией.	fintech	metrics	
+collocation	a hard decline	жёсткий отказ	Never retry a hard decline automatically.	Никогда не повторяй жёсткий отказ автоматически.	fintech	metrics	
+collocation	transaction volume	объём транзакций	Transaction volume doubles every December.	Объём транзакций удваивается каждый декабрь.	fintech	metrics	
+collocation	an average ticket	средний чек	The average ticket fell after the promotion.	Средний чек упал после акции.	fintech	metrics	
+collocation	a fraud rate	уровень фрода	The fraud rate must stay under the scheme threshold.	Уровень фрода должен оставаться ниже порога платёжной системы.	fintech	metrics	
+collocation	a risk score	скоринговый балл риска	A high risk score sends the payment to review.	Высокий балл риска отправляет платёж на проверку.	fintech	metrics	
+collocation	a chargeback ratio	доля чарджбэков	The chargeback ratio decides the scheme programme.	Доля чарджбэков определяет попадание в программу платёжной системы.	fintech	metrics	
+collocation	settle in a currency	рассчитываться в валюте	We settle in euro but bill in local currency.	Мы рассчитываемся в евро, но выставляем в местной валюте.	fintech	fx	

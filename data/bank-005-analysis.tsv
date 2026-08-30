@@ -1,0 +1,56 @@
+type	en	ru	example_en	example_ru	layer	topic	note
+collocation	elicit requirements	выявлять требования	We elicit requirements through workshops.	Мы выявляем требования через воркшопы.	analysis	babok	BABOK: elicitation, не gathering — требования не лежат готовыми
+collocation	a functional requirement	функциональное требование	Each functional requirement needs a test.	Каждому функциональному требованию нужен тест.	analysis	babok	
+collocation	a non-functional requirement	нефункциональное требование	Latency is a non-functional requirement.	Задержка это нефункциональное требование.	analysis	babok	
+collocation	acceptance criteria	критерии приёмки	The acceptance criteria are not testable yet.	Критерии приёмки пока непроверяемы.	analysis	babok	
+collocation	a traceability matrix	матрица трассировки	The traceability matrix links tests to requirements.	Матрица трассировки связывает тесты с требованиями.	analysis	babok	
+collocation	trace a requirement to	протрассировать требование до	Trace every requirement to a business goal.	Протрассируй каждое требование до бизнес-цели.	analysis	babok	
+collocation	stakeholder analysis	анализ заинтересованных сторон	Stakeholder analysis comes before elicitation.	Анализ заинтересованных сторон идёт до выявления.	analysis	babok	
+collocation	a business rule	бизнес-правило	This business rule changes every quarter.	Это бизнес-правило меняется каждый квартал.	analysis	babok	
+collocation	gap analysis	анализ разрывов	Gap analysis shows what the system lacks.	Анализ разрывов показывает, чего системе не хватает.	analysis	babok	
+collocation	as-is process	процесс как есть	Document the as-is process before redesign.	Опиши процесс как есть до перепроектирования.	analysis	babok	
+collocation	to-be process	целевой процесс	The to-be process removes two approvals.	Целевой процесс убирает два согласования.	analysis	babok	
+collocation	a solution scope	границы решения	The solution scope excludes reporting.	Границы решения исключают отчётность.	analysis	babok	
+collocation	a use case	сценарий использования	Write a use case for the refund flow.	Напиши сценарий использования для возврата.	analysis	babok	
+collocation	an edge case	краевой случай	This edge case breaks the nightly job.	Этот краевой случай ломает ночную задачу.	analysis	babok	
+collocation	a happy path	основной сценарий	The happy path works, the errors do not.	Основной сценарий работает, ошибки нет.	analysis	babok	
+collocation	a corner case	редкое сочетание условий	One corner case appears only at midnight.	Один редкий случай возникает только в полночь.	analysis	babok	
+collocation	validate a requirement	проверить требование на ценность	We validate requirements against the goal.	Мы проверяем требования на соответствие цели.	analysis	ireb	IREB: validation спрашивает нужное ли это
+collocation	verify a requirement	проверить требование на корректность	Verify the requirement is unambiguous.	Проверь, что требование однозначно.	analysis	ireb	IREB: verification спрашивает правильно ли записано
+collocation	an ambiguous requirement	неоднозначное требование	An ambiguous requirement produces two systems.	Неоднозначное требование порождает две системы.	analysis	ireb	
+collocation	a testable requirement	проверяемое требование	A testable requirement names a number.	Проверяемое требование называет число.	analysis	ireb	
+collocation	a conflicting requirement	противоречивое требование	Two conflicting requirements reached the sprint.	Два противоречивых требования дошли до спринта.	analysis	ireb	
+collocation	prioritise requirements	приоритизировать требования	We prioritise requirements with the sponsor.	Мы приоритизируем требования со спонсором.	analysis	ireb	
+collocation	a requirement baseline	базовая версия требований	The requirement baseline is frozen today.	Базовая версия требований заморожена сегодня.	analysis	ireb	
+collocation	a change request	запрос на изменение	Every change request needs an impact analysis.	Каждый запрос на изменение требует анализа влияния.	analysis	ireb	
+collocation	impact analysis	анализ влияния	Impact analysis takes two days here.	Анализ влияния тут занимает два дня.	analysis	ireb	
+collocation	a user story	пользовательская история	This user story is too big for one sprint.	Эта пользовательская история слишком велика для спринта.	analysis	agile	
+collocation	backlog refinement	груминг бэклога	Backlog refinement happens every Wednesday.	Груминг бэклога проходит каждую среду.	analysis	agile	
+collocation	definition of done	определение готовности	Our definition of done includes documentation.	Наше определение готовности включает документацию.	analysis	agile	
+collocation	definition of ready	определение готовности к работе	A story fails the definition of ready without criteria.	История не проходит определение готовности без критериев.	analysis	agile	
+collocation	a spike	исследовательская задача	We booked a spike to test the library.	Мы завели исследовательскую задачу на проверку библиотеки.	analysis	agile	
+collocation	story points	стори-поинты	This story is five story points.	Эта история на пять стори-поинтов.	analysis	agile	
+collocation	a sprint review	обзор спринта	The sprint review is on Friday at four.	Обзор спринта в пятницу в четыре.	analysis	agile	
+collocation	a retrospective	ретроспектива	The retrospective produced three actions.	Ретроспектива дала три действия.	analysis	agile	
+collocation	technical debt	технический долг	Technical debt slows every new feature.	Технический долг тормозит каждую новую функцию.	analysis	agile	
+collocation	a minimum viable product	минимально жизнеспособный продукт	The minimum viable product ships without reports.	Минимально жизнеспособный продукт выходит без отчётов.	analysis	agile	
+collocation	a proof of concept	подтверждение концепции	The proof of concept took three weeks.	Подтверждение концепции заняло три недели.	analysis	agile	
+collocation	a dependency	зависимость	This dependency blocks two other teams.	Эта зависимость блокирует две другие команды.	analysis	agile	
+collocation	a workaround	обходное решение	We shipped a workaround, not a fix.	Мы выкатили обходное решение, а не исправление.	analysis	agile	
+collocation	a root cause	коренная причина	The root cause was a timezone conversion.	Коренной причиной было преобразование часового пояса.	analysis	analysis	
+collocation	root cause analysis	анализ коренных причин	Root cause analysis found a config error.	Анализ коренных причин нашёл ошибку конфигурации.	analysis	analysis	
+collocation	a data flow diagram	диаграмма потоков данных	The data flow diagram shows three systems.	Диаграмма потоков данных показывает три системы.	analysis	analysis	
+collocation	an entity relationship diagram	диаграмма сущностей и связей	Draw an entity relationship diagram first.	Сначала нарисуй диаграмму сущностей и связей.	analysis	analysis	
+collocation	a sequence diagram	диаграмма последовательности	The sequence diagram clarified the retry logic.	Диаграмма последовательности прояснила логику повторов.	analysis	analysis	
+collocation	a state machine	конечный автомат	The order status is a state machine.	Статус заказа это конечный автомат.	analysis	analysis	
+collocation	a business process model	модель бизнес-процесса	The business process model has two swimlanes.	Модель бизнес-процесса имеет две дорожки.	analysis	analysis	
+collocation	a decision table	таблица решений	A decision table beats nested conditions here.	Таблица решений тут лучше вложенных условий.	analysis	analysis	
+collocation	a source of truth	источник истины	The ledger is the source of truth for balances.	Реестр это источник истины для остатков.	analysis	analysis	
+collocation	a mapping between	соответствие между	We need a mapping between the two schemas.	Нам нужно соответствие между двумя схемами.	analysis	analysis	
+collocation	a data dictionary	словарь данных	The data dictionary defines every field.	Словарь данных определяет каждое поле.	analysis	analysis	
+collocation	a glossary term	термин глоссария	Add settlement as a glossary term.	Добавь расчёт как термин глоссария.	analysis	analysis	
+collocation	a business case	обоснование	The business case did not survive review.	Обоснование не пережило рассмотрение.	analysis	analysis	
+collocation	a feasibility study	технико-экономическое обоснование	The feasibility study recommended buying.	Обоснование рекомендовало покупать, а не строить.	analysis	analysis	
+collocation	elicit through interviews	выявлять через интервью	We elicit needs through interviews and observation.	Мы выявляем потребности через интервью и наблюдение.	analysis	babok	
+collocation	walk through a scenario	пройти по сценарию	Let us walk through the refund scenario.	Давайте пройдём по сценарию возврата.	analysis	analysis	
+collocation	sign off on requirements	утвердить требования	The sponsor will sign off on requirements Friday.	Спонсор утвердит требования в пятницу.	analysis	analysis	

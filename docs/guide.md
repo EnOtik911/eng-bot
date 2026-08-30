@@ -146,6 +146,21 @@ locked ──интервал узнавания ≥ 21 д──> new ──пе
 | `mobility` | кикшеринг — устаревший слой, новые батчи в него не пишутся |
 | `hospitality` | отельная система — устаревший слой, туда же |
 
+Готовые батчи уже лежат в репозитории — генерировать заново не нужно, пока они не
+кончатся:
+
+| Файл | Слой | Единиц |
+|---|---|---|
+| [data/bank-002-core.tsv](../data/bank-002-core.tsv) | core | 45 |
+| [data/bank-003-social.tsv](../data/bank-003-social.tsv) | social | 54 |
+| [data/bank-004-business.tsv](../data/bank-004-business.tsv) | business | 49 |
+| [data/bank-005-analysis.tsv](../data/bank-005-analysis.tsv) | analysis | 55 |
+| [data/bank-006-fintech.tsv](../data/bank-006-fintech.tsv) | fintech | 65 |
+| [data/bank-007-tech.tsv](../data/bank-007-tech.tsv) | tech | 35 |
+
+Заливай по одному файлу за раз, а не всё сразу: 303 единицы это 606 карточек, и
+планировщик всё равно выдаёт их по дневной норме. Порядок — сверху вниз по таблице.
+
 **2. Вставить в лист `inbox`**, начиная со второй строки.
 
 **3. Запустить импорт.** Меню таблицы `Eng_bot` → «Импортировать батч из inbox»,

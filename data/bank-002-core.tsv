@@ -1,0 +1,46 @@
+type	en	ru	example_en	example_ru	layer	topic	note
+phrase	I am running late	я опаздываю	I am running late, start without me.	Я опаздываю, начинайте без меня.	core	daily	
+phrase	it depends	смотря по обстоятельствам	How long does it take? It depends.	Сколько это займёт? Смотря по обстоятельствам.	core	daily	
+phrase	let me check	дай проверю	Let me check and I will tell you.	Дай проверю и скажу тебе.	core	daily	
+phrase	I will get back to you	я вернусь с ответом	I will get back to you tomorrow morning.	Я вернусь с ответом завтра утром.	core	daily	
+phrase	that works for me	мне подходит	Friday at six? That works for me.	Пятница в шесть? Мне подходит.	core	daily	
+phrase	never mind	неважно, забей	Never mind, I found it myself.	Неважно, я сам нашёл.	core	daily	
+phrase	I would rather stay home	я бы лучше остался дома	I would rather stay home tonight.	Я бы лучше остался дома сегодня.	core	daily	
+phrase	hang on a second	подожди секунду	Hang on a second, my phone is ringing.	Подожди секунду, у меня телефон звонит.	core	daily	
+phrase	I am on my way	я уже еду	I am on my way, five minutes.	Я уже еду, пять минут.	core	daily	
+phrase	it is up to you	решай сам	Where do we eat? It is up to you.	Где едим? Решай сам.	core	daily	
+collocation	make up my mind	определиться	I cannot make up my mind about the offer.	Я не могу определиться насчёт предложения.	core	daily	
+collocation	run out of	закончиться	We ran out of coffee this morning.	У нас утром закончился кофе.	core	daily	
+collocation	pick someone up	забрать кого-то	I will pick you up at eight.	Я заберу тебя в восемь.	core	daily	
+collocation	drop someone off	подвезти и высадить	Can you drop me off at the station?	Можешь высадить меня у станции?	core	daily	
+collocation	get used to	привыкнуть к	I am getting used to the new schedule.	Я привыкаю к новому расписанию.	core	daily	
+collocation	look forward to	ждать с нетерпением	I look forward to the weekend.	Жду выходных с нетерпением.	core	daily	
+collocation	end up doing	в итоге сделать	We ended up staying two more days.	В итоге мы остались ещё на два дня.	core	daily	
+collocation	figure out	разобраться	I need to figure out the train times.	Мне надо разобраться с расписанием поездов.	core	daily	
+collocation	catch up with	наверстать, повидаться	Let us catch up with each other soon.	Давай скоро повидаемся.	core	daily	
+collocation	put off	откладывать	Do not put off the dentist again.	Не откладывай стоматолога снова.	core	daily	
+phrase	I am not sure yet	я пока не уверен	I am not sure yet, give me a day.	Я пока не уверен, дай мне день.	core	hedging	
+phrase	as far as I know	насколько я знаю	As far as I know the shop closes at nine.	Насколько я знаю, магазин закрывается в девять.	core	hedging	
+phrase	to be honest	честно говоря	To be honest I did not like it.	Честно говоря, мне не понравилось.	core	hedging	
+phrase	I have no idea	понятия не имею	I have no idea where he went.	Понятия не имею, куда он ушёл.	core	hedging	
+phrase	it is worth trying	стоит попробовать	The new place is worth trying.	Новое место стоит попробовать.	core	opinion	
+collocation	take a look at	взглянуть на	Take a look at this photo.	Взгляни на это фото.	core	daily	
+collocation	keep in touch	оставаться на связи	Let us keep in touch after the trip.	Давай останемся на связи после поездки.	core	daily	
+collocation	in the meantime	тем временем	In the meantime I will book the tickets.	Тем временем я забронирую билеты.	core	daily	
+collocation	the other day	на днях	I saw her the other day near the office.	Я видел её на днях у офиса.	core	daily	
+collocation	by the way	кстати	By the way your parcel arrived.	Кстати, твоя посылка пришла.	core	daily	
+phrase	I did not catch that	я не расслышал	Sorry, I did not catch that.	Извини, я не расслышал.	core	clarify	
+phrase	could you say that again	можешь повторить	Could you say that again more slowly?	Можешь повторить помедленнее?	core	clarify	
+phrase	what do you mean by that	что ты имеешь в виду	What do you mean by that exactly?	Что именно ты имеешь в виду?	core	clarify	
+collocation	give someone a hand	помочь кому-то	Can you give me a hand with the boxes?	Поможешь мне с коробками?	core	daily	
+collocation	be worn out	вымотаться	I am completely worn out after the flight.	Я совершенно вымотан после перелёта.	core	daily	
+collocation	grab a coffee	выпить кофе	Let us grab a coffee before the meeting.	Давай выпьем кофе перед встречей.	core	daily	
+collocation	sort something out	уладить что-то	I will sort the booking out today.	Я улажу бронирование сегодня.	core	daily	
+collocation	come across	наткнуться на	I often come across this problem at work.	Я часто наталкиваюсь на эту проблему на работе.	core	daily	
+collocation	be keen on	увлекаться чем-то	He is keen on cycling and swimming.	Он увлекается велоспортом и плаванием.	core	daily	
+collocation	get along with	ладить с	I get along with my neighbours well.	Я хорошо лажу с соседями.	core	daily	
+phrase	that makes sense	это логично	That makes sense, let us do it.	Это логично, давай так и сделаем.	core	opinion	
+phrase	fair enough	справедливо, принимается	Fair enough, I will not argue.	Справедливо, спорить не буду.	core	opinion	
+collocation	change my mind	передумать	I changed my mind about the trip.	Я передумал насчёт поездки.	core	daily	
+collocation	just in case	на всякий случай	Take an umbrella just in case.	Возьми зонт на всякий случай.	core	daily	
+collocation	be about to	вот-вот сделать	I was about to call you.	Я как раз собирался тебе позвонить.	core	daily	

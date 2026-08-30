@@ -1,0 +1,36 @@
+type	en	ru	example_en	example_ru	layer	topic	note
+collocation	an integration point	точка интеграции	Every integration point needs a timeout.	Каждой точке интеграции нужен таймаут.	tech	integration	
+collocation	a synchronous call	синхронный вызов	A synchronous call blocks the whole request.	Синхронный вызов блокирует весь запрос.	tech	integration	
+collocation	an asynchronous message	асинхронное сообщение	An asynchronous message can arrive twice.	Асинхронное сообщение может прийти дважды.	tech	integration	
+collocation	an idempotency key	ключ идемпотентности	Send an idempotency key with every retry.	Отправляй ключ идемпотентности с каждым повтором.	tech	integration	повтор с тем же ключом не создаёт второй платёж
+collocation	retry with backoff	повтор с задержкой	We retry with backoff up to five times.	Мы повторяем с задержкой до пяти раз.	tech	integration	
+collocation	a webhook	вебхук	The webhook fires when the status changes.	Вебхук срабатывает при смене статуса.	tech	integration	
+collocation	a rate limit	ограничение частоты	The rate limit is one hundred requests per minute.	Ограничение частоты сто запросов в минуту.	tech	integration	
+collocation	a circuit breaker	предохранитель	The circuit breaker opens after ten failures.	Предохранитель размыкается после десяти сбоев.	tech	integration	
+collocation	a dead letter queue	очередь необработанных сообщений	Failed events land in a dead letter queue.	Несработавшие события попадают в очередь необработанных.	tech	integration	
+collocation	at least once delivery	доставка не менее одного раза	At least once delivery means duplicates happen.	Доставка не менее одного раза значит, что дубли будут.	tech	integration	
+collocation	an api contract	контракт API	A breaking change violates the api contract.	Ломающее изменение нарушает контракт API.	tech	api	
+collocation	a breaking change	ломающее изменение	This breaking change needs a new version.	Это ломающее изменение требует новой версии.	tech	api	
+collocation	backward compatible	обратно совместимый	Keep the field backward compatible for a quarter.	Держи поле обратно совместимым квартал.	tech	api	
+collocation	deprecate an endpoint	объявить эндпоинт устаревшим	We deprecate the endpoint before removing it.	Мы объявляем эндпоинт устаревшим до удаления.	tech	api	
+collocation	a payload	полезная нагрузка	The payload exceeds the size limit.	Полезная нагрузка превышает лимит размера.	tech	api	
+collocation	a status code	код статуса	A four hundred status code means bad input.	Код статуса четыреста означает плохой ввод.	tech	api	
+collocation	a schema migration	миграция схемы	The schema migration runs before deployment.	Миграция схемы выполняется до развёртывания.	tech	data	
+collocation	a primary key	первичный ключ	The primary key must never be reused.	Первичный ключ нельзя переиспользовать.	tech	data	
+collocation	a foreign key	внешний ключ	The foreign key points at a deleted row.	Внешний ключ указывает на удалённую строку.	tech	data	
+collocation	data integrity	целостность данных	Data integrity beats performance here.	Целостность данных тут важнее производительности.	tech	data	
+collocation	a data quality issue	проблема качества данных	This data quality issue skews the report.	Эта проблема качества данных искажает отчёт.	tech	data	
+collocation	denormalise a table	денормализовать таблицу	We denormalise the table for read speed.	Мы денормализуем таблицу ради скорости чтения.	tech	data	
+collocation	an audit log	журнал изменений	The audit log records who changed the rate.	Журнал изменений фиксирует, кто менял ставку.	tech	data	
+collocation	a staging environment	стенд предпрода	Test it on the staging environment first.	Проверь это сначала на стенде предпрода.	tech	ops	
+collocation	a production incident	инцидент на проде	The production incident lasted forty minutes.	Инцидент на проде длился сорок минут.	tech	ops	
+collocation	a feature flag	фича-флаг	The feature flag hides it from most users.	Фича-флаг скрывает это от большинства пользователей.	tech	ops	
+collocation	a staged rollout	поэтапная выкатка	A staged rollout limits the blast radius.	Поэтапная выкатка ограничивает радиус поражения.	tech	ops	
+collocation	roll back a release	откатить релиз	We had to roll back the release at midnight.	Нам пришлось откатить релиз в полночь.	tech	ops	
+collocation	a race condition	состояние гонки	A race condition created two identical orders.	Состояние гонки создало два одинаковых заказа.	tech	ops	
+collocation	a single point of failure	единая точка отказа	The queue is a single point of failure.	Очередь это единая точка отказа.	tech	ops	
+collocation	a service level agreement	соглашение об уровне сервиса	The service level agreement promises four nines.	Соглашение об уровне сервиса обещает четыре девятки.	tech	ops	
+collocation	a nightly job	ночная задача	The nightly job failed on a leap second.	Ночная задача упала на високосной секунде.	tech	ops	
+collocation	observability	наблюдаемость	Observability turns an outage into a five minute fix.	Наблюдаемость превращает аварию в пятиминутное исправление.	tech	ops	
+collocation	a runbook	инструкция дежурного	The runbook says restart the consumer first.	Инструкция дежурного велит сначала перезапустить консьюмера.	tech	ops	
+collocation	a load test	нагрузочный тест	The load test broke at four thousand requests.	Нагрузочный тест сломался на четырёх тысячах запросов.	tech	ops	

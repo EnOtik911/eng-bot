@@ -1,0 +1,55 @@
+type	en	ru	example_en	example_ru	layer	topic	note
+phrase	I see what you mean	понимаю, о чём ты	I see what you mean, but the cost is high.	Понимаю, о чём ты, но цена высокая.	social	agree	
+phrase	I am with you on that	тут я с тобой согласен	I am with you on that completely.	Тут я с тобой полностью согласен.	social	agree	
+phrase	that is a fair point	справедливое замечание	That is a fair point, I had not thought of it.	Справедливое замечание, я об этом не подумал.	social	agree	
+phrase	I could not agree more	полностью согласен	I could not agree more with your plan.	Полностью согласен с твоим планом.	social	agree	
+phrase	I am not so sure about that	я в этом не уверен	I am not so sure about that approach.	Я не уверен насчёт этого подхода.	social	disagree	
+phrase	I see it differently	я вижу это иначе	I see it differently, let me explain.	Я вижу это иначе, дай объясню.	social	disagree	
+phrase	I take your point but	принимаю, но	I take your point but the timing is wrong.	Принимаю твою мысль, но время неподходящее.	social	disagree	
+phrase	that is not quite what I meant	я не совсем это имел в виду	That is not quite what I meant.	Я не совсем это имел в виду.	social	clarify	
+phrase	let me put it another way	скажу иначе	Let me put it another way then.	Тогда скажу иначе.	social	clarify	
+phrase	if I understand you correctly	если я правильно понял	If I understand you correctly you want both.	Если я правильно понял, ты хочешь оба варианта.	social	clarify	
+phrase	just to be clear	чтобы уточнить	Just to be clear, we ship on Friday?	Чтобы уточнить: мы выкатываем в пятницу?	social	clarify	
+collocation	bear with me	потерпи немного	Bear with me, I am almost done.	Потерпи немного, я почти закончил.	social	hedging	
+phrase	off the top of my head	навскидку	Off the top of my head it is about twenty.	Навскидку это около двадцати.	social	hedging	
+phrase	I would say roughly	я бы сказал примерно	I would say roughly two weeks.	Я бы сказал, примерно две недели.	social	hedging	
+phrase	it is hard to say	трудно сказать	It is hard to say without the data.	Трудно сказать без данных.	social	hedging	
+phrase	more or less	более или менее	The result is more or less what we expected.	Результат более или менее ожидаемый.	social	hedging	
+collocation	to some extent	до определённой степени	To some extent that is already true.	До определённой степени это уже так.	social	hedging	
+phrase	how have you been	как ты поживаешь	Hi Anna, how have you been?	Привет, Анна, как поживаешь?	social	smalltalk	
+phrase	what have you been up to	чем занимался	What have you been up to lately?	Чем занимался в последнее время?	social	smalltalk	
+phrase	long time no see	давно не виделись	Long time no see, you look great.	Давно не виделись, отлично выглядишь.	social	smalltalk	
+phrase	how is it going with the move	как продвигается переезд	How is it going with the move to Baku?	Как продвигается переезд в Баку?	social	smalltalk	
+collocation	catch up over lunch	поговорить за обедом	Let us catch up over lunch on Thursday.	Давай поговорим за обедом в четверг.	social	smalltalk	
+phrase	that sounds like fun	звучит весело	That sounds like fun, count me in.	Звучит весело, я в деле.	social	smalltalk	
+phrase	tell me more about it	расскажи подробнее	Tell me more about it over coffee.	Расскажи подробнее за кофе.	social	smalltalk	
+phrase	the same to you	и тебе того же	Have a good weekend. The same to you.	Хороших выходных. И тебе того же.	social	smalltalk	
+phrase	I am afraid I cannot	боюсь, не смогу	I am afraid I cannot make it tonight.	Боюсь, сегодня не смогу.	social	refuse	
+phrase	maybe another time	может, в другой раз	Not this week, maybe another time.	Не на этой неделе, может, в другой раз.	social	refuse	
+phrase	I would love to but	с радостью, но	I would love to but I have plans.	С радостью, но у меня планы.	social	refuse	
+collocation	take a rain check	перенести на потом	Can I take a rain check on dinner?	Можем перенести ужин на другой раз?	social	refuse	
+phrase	do you mind if I ask	не против, если спрошу	Do you mind if I ask how much it cost?	Не против, если спрошу, сколько это стоило?	social	polite	
+phrase	would it be possible to	возможно ли	Would it be possible to move the call?	Возможно ли перенести звонок?	social	polite	
+phrase	I was wondering whether	мне интересно, не мог бы	I was wondering whether you had time.	Мне интересно, есть ли у тебя время.	social	polite	
+phrase	sorry to bother you	извини, что отвлекаю	Sorry to bother you, quick question.	Извини, что отвлекаю, быстрый вопрос.	social	polite	
+phrase	thanks for the heads up	спасибо, что предупредил	Thanks for the heads up about the delay.	Спасибо, что предупредил о задержке.	social	polite	
+collocation	give someone a heads up	предупредить заранее	Give me a heads up before you arrive.	Предупреди меня заранее перед приездом.	social	polite	
+phrase	what do you think about it	что ты об этом думаешь	What do you think about it honestly?	Что ты об этом честно думаешь?	social	opinion	
+phrase	in my experience	по моему опыту	In my experience that never works.	По моему опыту это никогда не работает.	social	opinion	
+phrase	the way I see it	как я это вижу	The way I see it we have two options.	Как я это вижу, у нас два варианта.	social	opinion	
+phrase	it strikes me as odd	мне это кажется странным	It strikes me as odd that nobody asked.	Мне кажется странным, что никто не спросил.	social	opinion	
+collocation	have mixed feelings about	испытывать смешанные чувства	I have mixed feelings about the change.	У меня смешанные чувства насчёт изменения.	social	opinion	
+phrase	that is exactly my point	в этом и суть	That is exactly my point about the cost.	В этом и суть насчёт стоимости.	social	opinion	
+collocation	get to the point	перейти к сути	Let us get to the point quickly.	Давай быстро перейдём к сути.	social	structure	
+collocation	on the one hand	с одной стороны	On the one hand it is cheaper.	С одной стороны, это дешевле.	social	structure	
+collocation	on the other hand	с другой стороны	On the other hand it takes longer.	С другой стороны, это дольше.	social	structure	
+collocation	having said that	при этом, тем не менее	Having said that, the risk is real.	При этом риск реальный.	social	structure	
+collocation	as a matter of fact	на самом деле	As a matter of fact I already did it.	На самом деле я это уже сделал.	social	structure	
+collocation	in other words	другими словами	In other words we need more time.	Другими словами, нам нужно больше времени.	social	structure	
+collocation	for what it is worth	на всякий случай замечу	For what it is worth I would wait.	На всякий случай замечу: я бы подождал.	social	structure	
+collocation	to sum up	подводя итог	To sum up we agree on the scope.	Подводя итог: по объёму мы согласны.	social	structure	
+phrase	I am sorry to hear that	жаль это слышать	I am sorry to hear that about your father.	Жаль слышать это о твоём отце.	social	empathy	
+phrase	that must be tough	должно быть тяжело	That must be tough on the whole team.	Должно быть, это тяжело всей команде.	social	empathy	
+phrase	good for you	молодец, рад за тебя	You got the job? Good for you.	Ты получил работу? Молодец.	social	empathy	
+phrase	no worries at all	совсем не проблема	No worries at all, it happens.	Совсем не проблема, бывает.	social	empathy	
+collocation	fair to say	справедливо сказать	It is fair to say we underestimated it.	Справедливо сказать, что мы это недооценили.	social	opinion	
