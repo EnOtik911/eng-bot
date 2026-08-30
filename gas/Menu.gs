@@ -26,6 +26,7 @@ function onOpenMenu(e) {
     .addItem('Засеять стартовый батч', 'seedStarterBatch')
     .addItem('Засеять грамматику', 'seedGrammarBatch')
     .addItem('Самопроверка конфигурации', 'menuSelfCheck')
+    .addItem('Полная диагностика', 'menuDiagnostics')
     .addToUi();
 }
 
@@ -168,4 +169,12 @@ function menuImportGrammar() {
   } catch (e) {
     ui.alert('Импорт грамматики не выполнен', String(e.message), ui.ButtonSet.OK);
   }
+}
+
+function menuDiagnostics() {
+  var ui = SpreadsheetApp.getUi();
+  var report = runDiagnostics();
+  // Диалог обрезает длинный текст, поэтому полная версия остаётся в журнале.
+  ui.alert('Диагностика', report.slice(0, 1400) +
+    (report.length > 1400 ? '\n\n… полностью — в журнале выполнения' : ''), ui.ButtonSet.OK);
 }

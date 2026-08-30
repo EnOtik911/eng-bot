@@ -38,6 +38,18 @@ function dailyPing() {
   var allow = cfgAllowlist_();
   var cards = readCards_();
   var today = todayStr_(settings.timezone);
+  var patterns = [];
+  var grammarItems = [];
+  try {
+    patterns = readPatterns_();
+    grammarItems = readGrammarItems_();
+  } catch (e) {
+    // Листы грамматики могут ещё не существовать — это не повод молчать про лексику.
+  }
+  var poolSize = {};
+  grammarItems.forEach(function (it) {
+    poolSize[String(it.pattern_id)] = (poolSize[String(it.pattern_id)] || 0) + 1;
+  });
 
   allow.forEach(function (userId) {
     var mine = cards.filter(function (c) { return String(c.user_id) === String(userId); });
@@ -50,15 +62,61 @@ function dailyPing() {
     var target = Math.min(parseInt(settings.daily_new_target, 10) || 6, fresh);
     var leeches = mine.filter(function (c) { return String(c.state) === 'leech'; }).length;
 
-    if (due === 0 && target === 0) return;   // nothing to do, so say nothing
+    // Грамматика считается тем же способом и тем же условием, что и планировщик:
+    // шаблон без заданий не играбелен, поэтому в счёт не идёт.
+    var myPatterns = patterns.filter(function (p) {
+      return String(p.user_id) === String(userId) && poolSize[String(p.pattern_id)];
+    });
+    var gDue = myPatterns.filter(function (p) {
+      var st = String(p.state || 'new');
+      if (st === 'new' || st === 'suspended') return false;
+      return p.due && String(p.due).slice(0, 10) <= today;
+    }).length;
+    var gFresh = myPatterns.filter(function (p) { return String(p.state || 'new') === 'new'; }).length;
+    var gTarget = Math.min(parseInt(settings.grammar_daily_new_target, 10) || 1, gFresh);
 
-    var lines = ['<b>На сегодня</b>'];
-    if (due) lines.push('К повторению: ' + due);
-    if (target) lines.push('Новых: ' + target);
+    var nothing = (due + target + gDue + gTarget) === 0;
+
+    var lines;
+    if (nothing) {
+      // Раньше здесь стоял ранний возврат, и «сегодня нечего делать» было неотличимо
+      // от «триггер умер». Два дня тишины ровно так и выглядели.
+      var next = nextDueDate_(mine, myPatterns);
+      lines = ['<b>Сегодня свободно</b>',
+        'Всё повторено, новых на сегодня нет.',
+        next ? 'Следующее повторение: ' + next : 'Новых карточек в запасе не осталось — залей батч.'];
+      sendMessage_(userId, lines.join('\n'));
+      return;
+    }
+
+    lines = ['<b>На сегодня</b>'];
+    if (due || target) {
+      lines.push('Лексика — к повторению: ' + due + ', новых: ' + target);
+    }
+    if (gDue || gTarget) {
+      lines.push('Грамматика — шаблонов к повторению: ' + gDue + ', новых: ' + gTarget);
+    }
     if (leeches) lines.push('Пиявок ждёт переформулировки: ' + leeches);
     sendMessage_(userId, lines.join('\n'), launchKeyboard_());
   });
 }
+
+/** Ближайшая дата, когда снова появится работа. Нужна, чтобы тишина была объяснимой. */
+function nextDueDate_(cards, patterns) {
+  var dates = [];
+  cards.forEach(function (c) {
+    var st = String(c.state);
+    if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return;
+    if (c.due) dates.push(String(c.due).slice(0, 10));
+  });
+  patterns.forEach(function (p) {
+    if (String(p.state || 'new') === 'new' || String(p.state) === 'suspended') return;
+    if (p.due) dates.push(String(p.due).slice(0, 10));
+  });
+  dates.sort();
+  return dates.length ? dates[0] : '';
+}
+
 
 /** Weekly: is the webhook alive? A lost webhook is silent otherwise. */
 function checkWebhook() {

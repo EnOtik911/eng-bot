@@ -14,7 +14,16 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
-const TODAY = '2026-08-28';
+// Вычисляется, а не задаётся: заглушка Utilities.formatDate возвращает настоящую
+// текущую дату, поэтому захардкоженное значение делало набор проходящим ровно один
+// календарный день. Он и прошёл — 28 августа, и упал 30-го.
+const TODAY = new Date().toISOString().slice(0, 10);
+
+/** Все даты в наборе относительны сегодня: иначе «в будущем» однажды станет прошлым. */
+function dayShift(days) {
+  return new Date(Date.parse(TODAY + 'T00:00:00Z') + days * 86400000)
+    .toISOString().slice(0, 10);
+}
 
 function load({ cards, settings = {} }) {
   const src = readFileSync(join(root, 'gas', 'Session.gs'), 'utf8');
@@ -78,7 +87,7 @@ check('норма уменьшается на введённые сегодня 
   const cards = [
     // шесть уже введено сегодня
     ...Array.from({ length: 6 }, () => card({
-      state: 'review', due: '2026-08-29', reps: 1,
+      state: 'review', due: dayShift(-1), reps: 1,
       last_review: TODAY, first_review: TODAY, stability: 1, difficulty: 5
     })),
     // и четырнадцать ещё нетронутых
@@ -97,7 +106,7 @@ check('норма уменьшается на введённые сегодня 
 check('частично израсходованная норма выдаёт остаток', () => {
   const cards = [
     ...Array.from({ length: 4 }, () => card({
-      state: 'review', due: '2026-08-29', reps: 1,
+      state: 'review', due: dayShift(-1), reps: 1,
       last_review: TODAY, first_review: TODAY, stability: 1, difficulty: 5
     })),
     ...Array.from({ length: 10 }, () => card())
@@ -110,8 +119,8 @@ check('частично израсходованная норма выдаёт �
 check('введённые в прошлые дни норму не расходуют', () => {
   const cards = [
     ...Array.from({ length: 9 }, () => card({
-      state: 'review', due: '2026-09-10', reps: 3,
-      last_review: '2026-08-20', first_review: '2026-08-20', stability: 20, difficulty: 5
+      state: 'review', due: dayShift(+11), reps: 3,
+      last_review: dayShift(-10), first_review: dayShift(-10), stability: 20, difficulty: 5
     })),
     ...Array.from({ length: 10 }, () => card())
   ];
@@ -124,8 +133,8 @@ check('введённые в прошлые дни норму не расход�
 check('долг идёт впереди новых', () => {
   const cards = [
     ...Array.from({ length: 3 }, () => card({
-      state: 'review', due: '2026-08-27', reps: 2,
-      last_review: '2026-08-25', first_review: '2026-08-20', stability: 2, difficulty: 5
+      state: 'review', due: dayShift(-3), reps: 2,
+      last_review: dayShift(-5), first_review: dayShift(-10), stability: 2, difficulty: 5
     })),
     ...Array.from({ length: 10 }, () => card())
   ];
@@ -156,7 +165,7 @@ check('карточки другого пользователя не видны'
 check('applyFlush ставит first_review при первой оценке', () => {
   const cards = [card({ card_id: 'cA', user_id: '1' })];
   const mod = load({ cards });
-  mod.applyFlush('1', 'b1', [{ card_id: 'cA', rating: 3, ts: '2026-08-28T10:00:00Z' }]);
+  mod.applyFlush('1', 'b1', [{ card_id: 'cA', rating: 3, ts: TODAY + 'T10:00:00Z' }]);
   const patch = mod.__written[0].patch;
   assert(patch.first_review, 'first_review обязан быть проставлен');
   assert(patch.reps === 1, 'reps должен стать 1');
@@ -165,10 +174,10 @@ check('applyFlush ставит first_review при первой оценке', (
 check('applyFlush не перезаписывает уже стоящий first_review', () => {
   const cards = [card({
     card_id: 'cB', user_id: '1', state: 'review', reps: 3, stability: 5, difficulty: 5,
-    last_review: '2026-08-25', first_review: '2026-08-10'
+    last_review: dayShift(-5), first_review: dayShift(-20)
   })];
   const mod = load({ cards });
-  mod.applyFlush('1', 'b2', [{ card_id: 'cB', rating: 3, ts: '2026-08-28T10:00:00Z' }]);
+  mod.applyFlush('1', 'b2', [{ card_id: 'cB', rating: 3, ts: TODAY + 'T10:00:00Z' }]);
   const patch = mod.__written[0].patch;
   assert(patch.first_review === undefined,
     'первая дата не должна меняться, а пришло ' + patch.first_review);

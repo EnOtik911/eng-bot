@@ -1899,6 +1899,18 @@ function dailyPing() {
   var allow = cfgAllowlist_();
   var cards = readCards_();
   var today = todayStr_(settings.timezone);
+  var patterns = [];
+  var grammarItems = [];
+  try {
+    patterns = readPatterns_();
+    grammarItems = readGrammarItems_();
+  } catch (e) {
+    // Листы грамматики могут ещё не существовать — это не повод молчать про лексику.
+  }
+  var poolSize = {};
+  grammarItems.forEach(function (it) {
+    poolSize[String(it.pattern_id)] = (poolSize[String(it.pattern_id)] || 0) + 1;
+  });
 
   allow.forEach(function (userId) {
     var mine = cards.filter(function (c) { return String(c.user_id) === String(userId); });
@@ -1911,15 +1923,61 @@ function dailyPing() {
     var target = Math.min(parseInt(settings.daily_new_target, 10) || 6, fresh);
     var leeches = mine.filter(function (c) { return String(c.state) === 'leech'; }).length;
 
-    if (due === 0 && target === 0) return;   // nothing to do, so say nothing
+    // Грамматика считается тем же способом и тем же условием, что и планировщик:
+    // шаблон без заданий не играбелен, поэтому в счёт не идёт.
+    var myPatterns = patterns.filter(function (p) {
+      return String(p.user_id) === String(userId) && poolSize[String(p.pattern_id)];
+    });
+    var gDue = myPatterns.filter(function (p) {
+      var st = String(p.state || 'new');
+      if (st === 'new' || st === 'suspended') return false;
+      return p.due && String(p.due).slice(0, 10) <= today;
+    }).length;
+    var gFresh = myPatterns.filter(function (p) { return String(p.state || 'new') === 'new'; }).length;
+    var gTarget = Math.min(parseInt(settings.grammar_daily_new_target, 10) || 1, gFresh);
 
-    var lines = ['<b>На сегодня</b>'];
-    if (due) lines.push('К повторению: ' + due);
-    if (target) lines.push('Новых: ' + target);
+    var nothing = (due + target + gDue + gTarget) === 0;
+
+    var lines;
+    if (nothing) {
+      // Раньше здесь стоял ранний возврат, и «сегодня нечего делать» было неотличимо
+      // от «триггер умер». Два дня тишины ровно так и выглядели.
+      var next = nextDueDate_(mine, myPatterns);
+      lines = ['<b>Сегодня свободно</b>',
+        'Всё повторено, новых на сегодня нет.',
+        next ? 'Следующее повторение: ' + next : 'Новых карточек в запасе не осталось — залей батч.'];
+      sendMessage_(userId, lines.join('\n'));
+      return;
+    }
+
+    lines = ['<b>На сегодня</b>'];
+    if (due || target) {
+      lines.push('Лексика — к повторению: ' + due + ', новых: ' + target);
+    }
+    if (gDue || gTarget) {
+      lines.push('Грамматика — шаблонов к повторению: ' + gDue + ', новых: ' + gTarget);
+    }
     if (leeches) lines.push('Пиявок ждёт переформулировки: ' + leeches);
     sendMessage_(userId, lines.join('\n'), launchKeyboard_());
   });
 }
+
+/** Ближайшая дата, когда снова появится работа. Нужна, чтобы тишина была объяснимой. */
+function nextDueDate_(cards, patterns) {
+  var dates = [];
+  cards.forEach(function (c) {
+    var st = String(c.state);
+    if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return;
+    if (c.due) dates.push(String(c.due).slice(0, 10));
+  });
+  patterns.forEach(function (p) {
+    if (String(p.state || 'new') === 'new' || String(p.state) === 'suspended') return;
+    if (p.due) dates.push(String(p.due).slice(0, 10));
+  });
+  dates.sort();
+  return dates.length ? dates[0] : '';
+}
+
 
 /** Weekly: is the webhook alive? A lost webhook is silent otherwise. */
 function checkWebhook() {
@@ -2026,6 +2084,151 @@ function listTriggers() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     Logger.log(t.getHandlerFunction() + ' — ' + t.getEventType());
   });
+}
+
+// ==========================================================================
+// Diagnose.gs
+// ==========================================================================
+
+/**
+ * Одна команда, отвечающая на вопрос «почему ничего не происходит».
+ *
+ * Она существует потому, что двухдневная тишина имеет минимум пять разных причин —
+ * триггер не установлен, триггер падает, токен отозван, очередь действительно пуста,
+ * листы не созданы — и различить их снаружи нельзя. Раньше на это уходил обмен
+ * сообщениями из пяти шагов.
+ *
+ * Запускать из редактора: выбрать runDiagnostics, Выполнить, читать журнал.
+ */
+function runDiagnostics() {
+  var out = [];
+  function say(s) { out.push(s); Logger.log(s); }
+  function head(s) { say(''); say('=== ' + s); }
+
+  head('СЕКРЕТЫ');
+  ['BOT_TOKEN', 'SHEET_ID', 'ALLOWLIST'].forEach(function (k) {
+    var v = PropertiesService.getScriptProperties().getProperty(k);
+    say('  ' + k + ': ' + (v ? 'задан (' + v.length + ' символов)' : 'ОТСУТСТВУЕТ'));
+  });
+
+  head('ТРИГГЕРЫ');
+  var triggers = ScriptApp.getProjectTriggers();
+  if (!triggers.length) {
+    say('  НИ ОДНОГО ТРИГГЕРА. Это и есть причина тишины.');
+    say('  Лечится так: выполнить installTriggers() и потом в интерфейсе триггеров');
+    say('  поставить уведомления о сбоях на «Notify me immediately».');
+  } else {
+    triggers.forEach(function (t) {
+      say('  ' + t.getHandlerFunction() + ' — ' + t.getEventType());
+    });
+    ['dailyPing', 'checkWebhook', 'onOpenMenu'].forEach(function (fn) {
+      var found = triggers.some(function (t) { return t.getHandlerFunction() === fn; });
+      if (!found) say('  ОТСУТСТВУЕТ триггер для ' + fn + ' — выполни installTriggers()');
+    });
+  }
+
+  var settings = readSettings_();
+  var tz = settings.timezone || 'Europe/Moscow';
+  var today = todayStr_(tz);
+  head('ПОСЛЕДНИЙ ЗАПУСК ТРИГГЕРА');
+  if (!settings.last_trigger_run) {
+    say('  НИ РАЗУ. Триггер либо не установлен, либо падает при каждом запуске.');
+    say('  Проверь: Выполнения (Executions) в левом меню редактора — там видно ошибки.');
+  } else {
+    var ageH = (Date.now() - new Date(settings.last_trigger_run).getTime()) / 3600000;
+    say('  ' + settings.last_trigger_run + '  (' + ageH.toFixed(1) + ' часов назад)');
+    if (ageH > 36) say('  СТАРШЕ 36 ЧАСОВ — триггер не отработал, смотри Выполнения.');
+  }
+
+  head('БОТ');
+  try {
+    var me = tgApi_('getMe', {});
+    say('  getMe: ' + (me && me.ok ? 'ok, @' + me.result.username : 'ОШИБКА ' + JSON.stringify(me)));
+  } catch (e) { say('  getMe: ИСКЛЮЧЕНИЕ — ' + e.message); }
+  try {
+    var wh = tgApi_('getWebhookInfo', {});
+    var r = wh && wh.result ? wh.result : {};
+    say('  webhook url: ' + (r.url || 'НЕ УСТАНОВЛЕН'));
+    if (r.last_error_message) {
+      say('  ПОСЛЕДНЯЯ ОШИБКА WEBHOOK: ' + r.last_error_message + ' (' + r.last_error_date + ')');
+    }
+    if (r.pending_update_count) say('  необработанных обновлений: ' + r.pending_update_count);
+  } catch (e) { say('  getWebhookInfo: ИСКЛЮЧЕНИЕ — ' + e.message); }
+
+  var userId = cfgAllowlist_()[0];
+  head('ЛЕКСИКА (пользователь ' + userId + ')');
+  var cards = readCards_().filter(function (c) { return String(c.user_id) === String(userId); });
+  var byState = {};
+  cards.forEach(function (c) {
+    var st = String(c.state || 'пусто');
+    byState[st] = (byState[st] || 0) + 1;
+  });
+  say('  всего карточек: ' + cards.length);
+  Object.keys(byState).sort().forEach(function (k) { say('    ' + k + ': ' + byState[k]); });
+  var due = cards.filter(function (c) {
+    var st = String(c.state);
+    if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return false;
+    return c.due && String(c.due).slice(0, 10) <= today;
+  });
+  var introduced = cards.filter(function (c) {
+    return c.first_review && String(c.first_review).slice(0, 10) === today;
+  });
+  var noFirst = cards.filter(function (c) { return c.last_review && !c.first_review; });
+  say('  к повторению сегодня (' + today + '): ' + due.length);
+  say('  введено сегодня: ' + introduced.length +
+    ' из нормы ' + (settings.daily_new_target || '?'));
+  if (noFirst.length) {
+    say('  ВНИМАНИЕ: ' + noFirst.length + ' карточек показывались, но без first_review —');
+    say('  дневная норма считается неверно. Выполни backfillFirstReview() один раз.');
+  }
+  var futureDue = cards.map(function (c) { return c.due ? String(c.due).slice(0, 10) : ''; })
+    .filter(function (d) { return d && d > today; }).sort();
+  say('  ближайшее будущее повторение: ' + (futureDue[0] || 'нет'));
+
+  head('ГРАММАТИКА');
+  try {
+    var pats = readPatterns_().filter(function (p) { return String(p.user_id) === String(userId); });
+    var items = readGrammarItems_();
+    say('  шаблонов: ' + pats.length + ', заданий: ' + items.length);
+    if (!pats.length) {
+      say('  ПУСТО. Выполни по порядку: setupSpreadsheet, seedGrammarBatch, runImportGrammar.');
+    } else {
+      var gState = {};
+      pats.forEach(function (p) {
+        var st = String(p.state || 'new');
+        gState[st] = (gState[st] || 0) + 1;
+      });
+      Object.keys(gState).sort().forEach(function (k) { say('    ' + k + ': ' + gState[k]); });
+      var gDue = pats.filter(function (p) {
+        var st = String(p.state || 'new');
+        if (st === 'new' || st === 'suspended') return false;
+        return p.due && String(p.due).slice(0, 10) <= today;
+      }).length;
+      say('  к повторению сегодня: ' + gDue);
+      var gFuture = pats.map(function (p) { return p.due ? String(p.due).slice(0, 10) : ''; })
+        .filter(function (d) { return d && d > today; }).sort();
+      say('  ближайшее будущее повторение: ' + (gFuture[0] || 'нет'));
+    }
+  } catch (e) {
+    say('  листы грамматики недоступны: ' + e.message);
+    say('  Выполни setupSpreadsheet, затем seedGrammarBatch, затем runImportGrammar.');
+  }
+
+  head('ВЫВОД');
+  if (!triggers.length) {
+    say('  Уведомлений нет, потому что триггеры не установлены. installTriggers().');
+  } else if (!settings.last_trigger_run) {
+    say('  Триггеры есть, но ни один не отработал. Смотри Выполнения — там будет ошибка.');
+  } else if (!due.length) {
+    say('  Уведомлений нет, потому что работы действительно нет: ближайшее повторение ' +
+      (futureDue[0] || '— карточки кончились'));
+    say('  Если хочется учиться чаще — подними daily_new_target или залей новый батч.');
+  } else {
+    say('  Работа есть (' + due.length + ' к повторению), а уведомления не приходят —');
+    say('  значит падает отправка. Смотри строку про getMe и webhook выше.');
+  }
+  say('');
+  return out.join('\n');
 }
 
 // ==========================================================================
@@ -2180,6 +2383,7 @@ function onOpenMenu(e) {
     .addItem('Засеять стартовый батч', 'seedStarterBatch')
     .addItem('Засеять грамматику', 'seedGrammarBatch')
     .addItem('Самопроверка конфигурации', 'menuSelfCheck')
+    .addItem('Полная диагностика', 'menuDiagnostics')
     .addToUi();
 }
 
@@ -2322,6 +2526,14 @@ function menuImportGrammar() {
   } catch (e) {
     ui.alert('Импорт грамматики не выполнен', String(e.message), ui.ButtonSet.OK);
   }
+}
+
+function menuDiagnostics() {
+  var ui = SpreadsheetApp.getUi();
+  var report = runDiagnostics();
+  // Диалог обрезает длинный текст, поэтому полная версия остаётся в журнале.
+  ui.alert('Диагностика', report.slice(0, 1400) +
+    (report.length > 1400 ? '\n\n… полностью — в журнале выполнения' : ''), ui.ButtonSet.OK);
 }
 
 // ==========================================================================

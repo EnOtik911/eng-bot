@@ -37,5 +37,9 @@ for t in test/fsrs.test.mjs test/session.test.mjs test/auth.test.mjs \
   node "$t" || fail=1
   echo
 done
+echo "── календарь: ни один набор не зависит от текущей даты"
+node test/timetravel.mjs || fail=1
+echo
+
 if [ "$fail" -ne 0 ]; then echo "FAILED"; exit 1; fi
 echo "all suites green"
