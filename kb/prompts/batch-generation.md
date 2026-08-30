@@ -34,7 +34,8 @@ type <TAB> en <TAB> ru <TAB> example_en <TAB> example_ru <TAB> layer <TAB> topic
 - example_en: одно естественное предложение, в котором единица употреблена буквально
   в том виде, как она записана в колонке en. Не переписывай единицу другими словами.
 - example_ru: перевод примера, естественный по-русски, а не подстрочник.
-- layer: одно из core | business | mobility | hospitality | tech. Для этого батча: {{СЛОЙ}}
+- layer: одно из core | social | business | analysis | fintech | tech. Для этого батча: {{СЛОЙ}}
+  (mobility и hospitality остались валидными ради старых карточек, но новые батчи в них не пишем)
 - topic: одно слово или короткая метка по-английски, например release, metrics, pms.
 - note: оставь пустым, если нечего добавить.
 

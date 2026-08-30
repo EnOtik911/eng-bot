@@ -13,9 +13,15 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dataDir = join(here, '..', 'data');
-const COLUMNS = ['type', 'en', 'ru', 'example_en', 'example_ru', 'layer', 'topic', 'note'];
-const TYPES = ['word', 'collocation', 'phrase'];
-const LAYERS = ['core', 'business', 'mobility', 'hospitality', 'tech'];
+// Читаются из gas/Config.gs, а не переписываются сюда. Собственная копия означала бы,
+// что тест может быть зелёным, когда настоящий валидатор строку отклоняет — это
+// проверка согласованности с самой собой вместо проверки корректности.
+const cfgScope = {};
+new Function('exports', readFileSync(join(here, '..', 'gas', 'Config.gs'), 'utf8') +
+  '\nObject.assign(exports, {IMPORT_COLUMNS, VALID_TYPES, VALID_LAYERS});')(cfgScope);
+const COLUMNS = cfgScope.IMPORT_COLUMNS;
+const TYPES = cfgScope.VALID_TYPES;
+const LAYERS = cfgScope.VALID_LAYERS;
 const norm = s => String(s || '').toLowerCase().trim().replace(/\s+/g, ' ');
 // Must stay identical to matchTokens_ / exampleUsesUnit_ in gas/Import.gs.
 // Literal containment is impossible for collocations: determiners vary and verbs

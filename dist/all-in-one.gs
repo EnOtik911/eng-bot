@@ -70,7 +70,23 @@ var LOG_COLUMNS = ['card_id', 'ts', 'rating', 'elapsed_days', 'interval_days',
   'stability', 'difficulty', 'batch_id'];
 
 var VALID_TYPES = ['word', 'collocation', 'phrase'];
-var VALID_LAYERS = ['core', 'business', 'mobility', 'hospitality', 'tech'];
+/**
+ * ПОРЯДОК ЗНАЧИМ: по нему planировщик решает, какие новые карточки показать первыми
+ * (Session.gs, layerRank). Это очередь освоения, а не просто перечисление.
+ *
+ *   core      бытовое ядро — то, без чего не поговорить ни о чём
+ *   social    разговорные связки: согласие, возражение, смягчение, small talk
+ *   business  общий офис: встречи, переписка, сроки, договорённости
+ *   analysis  ремесло аналитика: требования, трассировка, критерии приёмки
+ *   fintech   предметная область: платежи, карты, расчёты, комплаенс
+ *   tech      системная часть: интеграции, API, данные, окружения
+ *
+ * mobility и hospitality оставлены валидными, но последними: карточки с ними уже
+ * лежат в таблице и удалять их незачем — они просто уходят в конец очереди новых.
+ * Убрать их из списка значило бы сломать и существующие строки, и data/seed-batch-001.tsv.
+ */
+var VALID_LAYERS = ['core', 'social', 'business', 'analysis', 'fintech', 'tech',
+  'mobility', 'hospitality'];
 
 var DEFAULT_SETTINGS = {
   daily_new_target: '6',
