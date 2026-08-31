@@ -235,5 +235,40 @@ check('elapsed_days для планировщика считается и по �
   assert(n === 7, 'прошло дней: ' + n + ' — в FSRS уехало бы NaN, а с ним стабильность и сложность');
 });
 
+
+/**
+ * «Что меня ждёт дальше» — экран итогов раньше сообщал только сколько сделано.
+ * Дата должна быть БУДУЩЕЙ: просроченная карточка ждёт не завтра, а сейчас, и
+ * показывать её как «следующее повторение» значило бы врать.
+ */
+check('next_due — ближайший будущий срок, а не просроченный', () => {
+  const { buildSession } = load({ cards: [
+    card({ card_id: 'overdue', state: 'review', due: asSheetDate(dayShift(-3)) }),
+    card({ card_id: 'soon', state: 'review', due: asSheetDate(dayShift(2)) }),
+    card({ card_id: 'later', state: 'review', due: asSheetDate(dayShift(9)) })
+  ]});
+  const n = buildSession('1').counts.next_due;
+  assert(n === dayShift(2), 'next_due = ' + n + ', ожидалось ' + dayShift(2));
+});
+
+check('next_due пуст, когда впереди ничего нет', () => {
+  const { buildSession } = load({ cards: [
+    card({ card_id: 'n1', state: 'new' }),
+    card({ card_id: 'l1', state: 'locked' })
+  ]});
+  const n = buildSession('1').counts.next_due;
+  assert(n === '', 'next_due = ' + JSON.stringify(n) + ' — новые и запертые срока не имеют');
+});
+
+check('запертые и пиявки не становятся «следующим повторением»', () => {
+  const { buildSession } = load({ cards: [
+    card({ card_id: 'lock', state: 'locked', due: asSheetDate(dayShift(1)) }),
+    card({ card_id: 'leech', state: 'leech', due: asSheetDate(dayShift(2)) }),
+    card({ card_id: 'ok', state: 'review', due: asSheetDate(dayShift(6)) })
+  ]});
+  const n = buildSession('1').counts.next_due;
+  assert(n === dayShift(6), 'next_due = ' + n + ' — в расчёт попало то, что не выдаётся');
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) process.exit(1);

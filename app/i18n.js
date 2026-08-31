@@ -26,6 +26,28 @@ window.I18N = {
     good: 'Помню',
     easy: 'Легко',
     typeHint: 'Набери по-английски и нажми «Показать»',
+    // Восемь секунд на карточку — не выдумка, а величина из замеренной модели
+    // нагрузки (test/load-model.mjs). По ней же считалась дневная норма.
+    SEC_PER_CARD: 8,
+    paceFree: 'На сегодня свободно',
+    paceOnTrack: 'Идёшь по плану',
+    paceDebt: 'Накопился долг',
+    paceFirst: 'Первая сессия',
+    paceLine: function (due, fresh, minutes) {
+      var parts = [];
+      if (due) parts.push('долгов ' + due);
+      if (fresh) parts.push('новых ' + fresh);
+      if (!parts.length) return 'ничего не ждёт';
+      return parts.join(' · ') + ' · ≈' + minutes + ' мин';
+    },
+    sessionPos: function (n, total) { return 'карточка ' + n + ' из ' + total; },
+    minutesLeft: function (m) { return '≈' + m + ' мин осталось'; },
+    pause: 'Пауза',
+    paused: 'Сохранено. Вернёшься — продолжишь с этой же карточки.',
+    doneNext: function (date) { return 'Следующее повторение: ' + date; },
+    doneNothingAhead: 'Впереди пусто — залей ещё батч или подними норму.',
+    doneLeftToday: function (n) { return 'Сегодня осталось: ' + n; },
+    doneAllClear: 'На сегодня всё закрыто.',
     doneTitle: 'Сессия закрыта',
     resumeVocab: function (n) {
       return 'Продолжить: осталось ' + n + ' ' + plural(n, 'карточка', 'карточки', 'карточек');

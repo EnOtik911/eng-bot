@@ -145,6 +145,9 @@ body {
   opacity: .7;
   will-change: transform;
 }
+/* Фон держится в одном семействе: синий, приглушённая сталь, светлый синий.
+   Прежние #C3B0FF и #93E3CE тянули в фиолетовый и мятный — два чужих тона под
+   стеклом, которое их же и размазывает по всему экрану. */
 .aurora span:nth-child(1) {
   width: 62vmax; height: 62vmax; left: -18vmax; top: -22vmax;
   background: radial-gradient(circle, #9DB8FF 0%, rgba(157,184,255,0) 70%);
@@ -152,12 +155,12 @@ body {
 }
 .aurora span:nth-child(2) {
   width: 52vmax; height: 52vmax; right: -16vmax; top: 8vmax;
-  background: radial-gradient(circle, #C3B0FF 0%, rgba(195,176,255,0) 70%);
+  background: radial-gradient(circle, #A8B6CE 0%, rgba(168,182,206,0) 70%);
   animation: drift-b 42s var(--ease) infinite alternate;
 }
 .aurora span:nth-child(3) {
   width: 46vmax; height: 46vmax; left: 12vmax; bottom: -20vmax;
-  background: radial-gradient(circle, #93E3CE 0%, rgba(147,227,206,0) 70%);
+  background: radial-gradient(circle, #C7D6F2 0%, rgba(199,214,242,0) 70%);
   animation: drift-c 38s var(--ease) infinite alternate;
 }
 @keyframes drift-a { to { transform: translate3d(14vmax, 10vmax, 0) scale(1.15); } }
@@ -1041,3 +1044,27 @@ a.tag-accent { text-decoration: none; }
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
 }
+
+/* ---------- пульс: одна строка, отвечающая «много или мало» ---------- */
+
+.pulse {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 var(--s3);
+  padding: var(--s2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .46);
+  border: 1px solid rgba(94, 118, 214, .16);
+}
+.pulse-status { font-size: 14px; font-weight: 700; color: var(--accent); }
+.pulse-status.is-free { color: var(--fg-dim); }
+/* Долг подсвечивается тем же цветом, что и оценка «не помню»: один смысл — один
+   цвет на всё приложение, иначе красный начинает значить что попало. */
+.pulse-status.is-debt { color: var(--again-ink); }
+.pulse-line { font-size: 12.5px; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+
+/* Пауза — тихая кнопка под основным действием: она нужна редко, но должна быть
+   на виду именно в момент, когда человек решает уйти. */
+.btn-pause { margin-top: var(--s1); }
+
+#done-next { white-space: pre-line; }

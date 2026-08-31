@@ -93,14 +93,20 @@
     el('progress').style.width = Math.round(done / total * 100) + '%';
   }
 
+  /**
+   * «Осталось 18» не отвечает на вопрос, который человек задаёт на улице: сколько
+   * это ещё по времени и далеко ли конец. Позиция и минуты отвечают.
+   */
   function renderCounters() {
-    var newPart = T.counterNew + ' ' + (session.counts.new_in_session || 0);
-    if (session.counts.new_introduced_today) {
-      newPart += ' (сегодня уже ' + session.counts.new_introduced_today + ')';
-    }
+    var total = session.plannedTotal || session.remaining();
+    var pos = Math.min(session.answered + 1, total);
     el('counter').textContent =
-      T.counterDue + ' ' + (session.counts.due || 0) + ' · ' + newPart +
-      ' · осталось ' + session.remaining();
+      T.sessionPos(pos, total) + ' · ' + T.minutesLeft(minutesFor(session.remaining()));
+  }
+
+  /** Время по замеренной модели нагрузки, а не по ощущению: 8 секунд на карточку. */
+  function minutesFor(cards) {
+    return Math.max(1, Math.round(cards * T.SEC_PER_CARD / 60));
   }
 
   function renderCard() {
@@ -186,11 +192,27 @@
       ? T.practiceDoneBody(session.answered)
       : T.doneBody(session ? session.answered : 0);
     el('done-title').textContent = practice ? T.practiceDoneTitle : T.doneTitle;
+    renderWhatsNext(practice);
     // Пройденная сессия больше не «незакрытая»: снимок надо убрать, иначе на главном
     // экране навсегда повиснет «продолжить» с пустой очередью.
     window.Store.clearProgress();
     show('screen-done');
     if (!practice) flush();
+  }
+
+  /**
+   * «Что меня ждёт дальше» — вопрос, который экран итогов раньше не закрывал:
+   * он сообщал, сколько сделано, и молчал про завтра.
+   */
+  function renderWhatsNext(practice) {
+    var box = el('done-next');
+    if (practice || !state.vocab) { box.textContent = ''; return; }
+    var c = state.vocab.counts || {};
+    var left = (c.due || 0) + (c.new_in_session || 0) - (session ? session.answered : 0);
+    var lines = [];
+    lines.push(left > 0 ? T.doneLeftToday(left) : T.doneAllClear);
+    lines.push(c.next_due ? T.doneNext(c.next_due) : T.doneNothingAhead);
+    box.textContent = lines.join('\n');
   }
 
   function flush(force) {
@@ -346,6 +368,31 @@
     });
   }
 
+  /**
+   * Одна строка, которая отвечает «много или мало». Долг сравнивается с дневной
+   * нормой, а не с нулём: два просроченных при норме десять — это не долг, это
+   * вчерашний хвост, и пугать им незачем.
+   */
+  function renderPulse(v) {
+    if (!v || !v.counts) { el('pulse').hidden = true; return; }
+    el('pulse').hidden = false;
+    var c = v.counts;
+    var due = c.due || 0;
+    var fresh = c.new_in_session || 0;
+    var target = (v.settings && v.settings.daily_new_target) || 10;
+
+    var status;
+    if (!due && !fresh) status = T.paceFree;
+    else if (!c.total || c.total === fresh) status = T.paceFirst;
+    else if (due > target * 2) status = T.paceDebt;
+    else status = T.paceOnTrack;
+
+    el('pulse-status').textContent = status;
+    el('pulse-status').className = 'pulse-status' +
+      (status === T.paceDebt ? ' is-debt' : status === T.paceFree ? ' is-free' : '');
+    el('pulse-line').textContent = T.paceLine(due, fresh, minutesFor(due + fresh));
+  }
+
   function renderHome() {
     setBanner('');
     var v = state.vocab;
@@ -362,6 +409,8 @@
     el('tile-grammar-count').textContent = g
       ? T.homeDue(gDue) + T.homeNew(gNew) : '—';
     el('tile-grammar').disabled = !g || !(g.patterns && g.patterns.length);
+
+    renderPulse(v);
 
     var saved = savedProgress();
     var left = saved ? saved.cards.length : 0;
@@ -475,6 +524,12 @@
     bindKeyboard(el('typebox'), el('typebox-done'), el('typefield'));
     el('tile-vocab').addEventListener('click', startVocab);
     el('resume-vocab').addEventListener('click', startVocab);
+    el('pause-session').addEventListener('click', function () {
+      saveProgress();
+      flush();
+      setBanner(T.paused, 'info');
+      renderHome();
+    });
     el('tile-stats').addEventListener('click', function () {
       if (window.Stats) window.Stats.open();
     });

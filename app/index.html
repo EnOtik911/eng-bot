@@ -171,6 +171,10 @@
       </div>
 
       <button id="reveal" class="btn btn-primary">Показать</button>
+      <!-- Пауза видимая. Позиция сохранялась и раньше, после каждой карточки, но
+           владелец об этом не знал — а невидимая гарантия не работает: он всё
+           равно боялся уйти посреди сессии. -->
+      <button id="pause-session" class="btn btn-quiet btn-pause" type="button">Пауза</button>
 
       <div id="ratings" class="ratings" hidden>
         <button class="btn rate rate-again" data-rating="1">Не помню<span class="key">1</span></button>
@@ -193,6 +197,7 @@
     <div class="state-icon">✓</div>
     <h1 id="done-title">Сессия закрыта</h1>
     <p id="done-body" class="muted"></p>
+    <p id="done-next" class="hint"></p>
     <p id="flush-status" class="hint"></p>
     <button id="practice-done" class="btn">Погонять пройденное</button>
     <button id="again-session" class="btn btn-quiet">Ещё раз</button>
@@ -200,6 +205,12 @@
 
   <section id="screen-home" hidden class="state">
     <h1 class="home-title">Что тренируем</h1>
+    <!-- Пульс. Владелец заходил и не понимал, есть ли долг и сколько это по
+         времени: плитки называли числа, но не говорили, много это или мало. -->
+    <div id="pulse" class="pulse">
+      <span id="pulse-status" class="pulse-status"></span>
+      <span id="pulse-line" class="pulse-line"></span>
+    </div>
     <div class="tiles">
       <button id="tile-vocab" class="tile">
         <span class="tile-name">Лексика</span>

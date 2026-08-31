@@ -39,6 +39,19 @@ function daysBetween_(from, to) {
   return Math.max(Math.round((b - a) / 86400000), 0);
 }
 
+/** Ближайший срок среди зрелых карточек. Пустая строка = впереди ничего нет. */
+function nextDue_(cards, today, tz) {
+  var dates = [];
+  cards.forEach(function (c) {
+    var st = String(c.state || '');
+    if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return;
+    var k = dateKey_(c.due, tz);
+    if (k && k > today) dates.push(k);
+  });
+  dates.sort();
+  return dates.length ? dates[0] : '';
+}
+
 function buildSession(userId) {
   var settings = readSettings_();
   var tz = settings.timezone || 'Europe/Moscow';
@@ -118,7 +131,11 @@ function buildSession(userId) {
       new_allowance_left: newAllowance,
       total: mine.length,
       leeches: leeches,
-      locked: locked
+      locked: locked,
+      // Ближайшая дата, когда снова появится работа. Без неё экран итогов может
+      // сказать «на сегодня всё», но не может сказать, что будет завтра — а
+      // именно этого владелец и не понимал, закрывая сессию.
+      next_due: nextDue_(mine, today, tz)
     },
     warnings: warnings
   };
