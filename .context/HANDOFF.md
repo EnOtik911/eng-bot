@@ -18,20 +18,37 @@
 - Bank is loaded from the chat via /load, because the spreadsheet menu needs hands in
   the spreadsheet and `clasp run` needs a GCP project this project lacks
 
+- Sheets returns DATES AS Date OBJECTS from getValues(), never strings. Every
+  comparison must go through dateKey_ (gas/Session.gs). String(date).slice(0,10)
+  gives 'Sun Aug 28', which equals no date and sorts ABOVE any '2026-..' — it made
+  `due <= today` permanently false for four months. Any new test that stubs a date
+  must stub a Date object, not a string — that is how the suites missed it
+- Analytics are computed server-side; the client never receives the review log
+- Achievements are a pure function of the metrics, so a 30-day streak is testable
+- .card carries backdrop-filter: NEVER emit that class from JS (css-perf guards it)
+
 ## Programme agreed with the owner (three waves)
 
 | Wave | Scope | Status |
 |---|---|---|
 | A | UX frame: guide layout, palette, decor | DONE, verified live |
-| B | Analytics: per-block + overall trend screen, /export CSV to chat | NOT STARTED |
-| C | Memetic achievements, black humour, Audi/aviation references | NOT STARTED |
+| B | Analytics: per-block + overall trend screen, /export CSV to chat | DONE, deployed @13 |
+| C | Memetic achievements, black humour, Audi/aviation references | DONE, 17 achievements |
 
 Wave A delivered only the measured defects (guide overflow, palette, decor). The owner
 also asked for a coherent UX pass over the whole app — grid, typography, buttons,
 screen-to-screen consistency. That was NOT done and is still open.
 
+## Open, not done
+
+- The broad UX pass the owner asked for (grid, typography, buttons, screen-to-screen
+  consistency) is still untouched. Wave A fixed only measured defects.
+- FSRS state written BEFORE the date fix used NaN elapsed days, so existing
+  stability/difficulty values are suspect. The scheduler self-corrects over
+  subsequent reviews; a deliberate reset was NOT done and needs the owner's call.
+- The leaked bot token has still never been revoked in BotFather.
+
 ## Resume instruction
 
-Start wave B. Analytics decision already taken: screen inside the app plus a /export
-command sending CSV to the chat. Read gas/Session.gs (review_log_<year> is the source)
-and .context/PROJECT.md lines 66-91 before planning.
+Ask the owner whether to reset the FSRS state corrupted by the date bug, then take
+the UX pass. Read .context/PROJECT.md lines 66-91 first.
