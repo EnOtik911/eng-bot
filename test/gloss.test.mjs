@@ -49,14 +49,18 @@ check('схема импорта знает про breakdown, и он после
     'в CARD_COLUMNS breakdown тоже обязан быть последним');
 });
 
-check('слои, которые владелец учит сейчас, разобраны целиком', () => {
-  const need = ['seed-batch-001.tsv', 'bank-002-core.tsv', 'bank-003-social.tsv'];
-  need.forEach(f => {
+check('весь банк разобран, без пропусков ни в одном слое', () => {
+  // Проверка на ВСЕ файлы, а не на выборочные: единица без разбора попадёт в
+  // очередь молча — импорт её примет, экран покажет карточку, и заметить пробел
+  // можно будет только на ней самой, через месяц после заливки.
+  files.forEach(f => {
     const inFile = units.filter(u => u.file === f);
     const gone = inFile.filter(u => !u.breakdown).map(u => u.en);
-    assert(gone.length === 0, f + ': без разбора ' + gone.length + ' — ' + gone.slice(0, 5).join(' | '));
-    console.log('         ' + f + ': ' + inFile.length + ' единиц');
+    assert(gone.length === 0,
+      f + ': без разбора ' + gone.length + ' из ' + inFile.length + ' — ' + gone.slice(0, 5).join(' | '));
+    console.log('         ' + f + ': ' + inFile.length + '/' + inFile.length);
   });
+  console.log('         всего единиц: ' + units.length);
 });
 
 check('каждый фрагмент разбора — «слово — перевод»', () => {
