@@ -83,7 +83,27 @@
   --easy-ink: #234FC4;
 
   --s1: 8px;  --s2: 16px;  --s3: 24px;  --s4: 32px;  --s5: 48px;  --s6: 64px;
-  --r-lg: 28px;  --r-md: 18px;  --r-sm: 12px;
+  --r-lg: 28px;  --r-md: 18px;  --r-sm: 12px;  --r-xs: 10px;  --r-pill: 999px;
+
+  /* Шкала кегля. До неё в файле было 29 РАЗНЫХ значений font-size, включая
+     13.5 против 13 и 14.5 против 14 — полупиксельный дрейф, который глазом
+     читается как «не выверено», а по отдельности каждое значение выглядит
+     осмысленным. Восемь ступеней покрывают всё, максимальный сдвиг 0.5px:
+     это ревизия, а не редизайн. Дисплейные размеры остаются на clamp(). */
+  --t-2xs: 11px;    /* ярлыки, подписи капсом */
+  --t-xs: 12.5px;   /* подсказки, служебные строки */
+  --t-sm: 13px;     /* вторичный текст */
+  --t-md: 14px;     /* плотный интерфейсный текст */
+  --t-lg: 15px;     /* заголовки блоков */
+  --t-xl: 17px;     /* акценты внутри карточки */
+  --t-2xl: 19px;    /* заголовки экранов помельче */
+  --t-3xl: 22px;    /* крупные числа */
+
+  /* Заголовки. Гайд объявлял свой clamp(28px, 6vw, 38px), приложение —
+     clamp(26px, 7vw, 34px): одна и та же роль, два разных размера, и на переходе
+     из приложения в гайд заголовок прыгал. Теперь роль задаёт токен. */
+  --h-screen: clamp(26px, 7vw, 34px);
+  --h-section: clamp(21px, 4.5vw, 26px);
 
   --ease: cubic-bezier(.32, .72, 0, 1);
   --fast: 180ms;
@@ -203,7 +223,7 @@ body {
 }
 
 .counter {
-  font-size: 12.5px;
+  font-size: var(--t-xs);
   color: var(--fg-faint);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -213,7 +233,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.pending { font-size: 12.5px; color: var(--hard); white-space: nowrap; }
+.pending { font-size: var(--t-xs); color: var(--hard); white-space: nowrap; }
 
 /* ---------- баннер ---------- */
 
@@ -221,7 +241,7 @@ body {
   margin: var(--s2) var(--s3) 0;
   padding: 11px 15px;
   border-radius: var(--r-md);
-  font-size: 13px;
+  font-size: var(--t-sm);
   line-height: 1.4;
   color: #7A4A08;
   background: rgba(255, 196, 106, .3);
@@ -244,7 +264,7 @@ body {
 
 .center { text-align: center; }
 .muted { color: var(--fg-dim); }
-.hint { color: var(--fg-faint); font-size: 13px; margin: var(--s1) 0 0; }
+.hint { color: var(--fg-faint); font-size: var(--t-sm); margin: var(--s1) 0 0; }
 
 /* ---------- карточка: стекло №2, единственный герой экрана ---------- */
 
@@ -305,12 +325,12 @@ body {
 
 .meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: var(--s3); }
 .tag {
-  font-size: 10.5px;
+  font-size: var(--t-2xs);
   font-weight: 600;
   letter-spacing: .07em;
   text-transform: uppercase;
   padding: 5px 10px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--fg-faint);
   background: rgba(14, 21, 38, .05);
   border: 1px solid rgba(14, 21, 38, .06);
@@ -340,7 +360,7 @@ body {
   width: 100%;
   padding: 15px var(--s2);
   font: inherit;
-  font-size: 17px;
+  font-size: var(--t-xl);
   color: var(--fg);
   border-radius: var(--r-md);
   border: 1px solid rgba(14, 21, 38, .14);
@@ -350,7 +370,7 @@ body {
 .typebox::placeholder { color: var(--fg-faint); }
 .typebox:focus {
   outline: none;
-  border-color: rgba(53, 102, 234, .8);
+  border-color: var(--accent);
   background: #fff;
 }
 
@@ -371,8 +391,8 @@ body {
   color: #22409E;
   overflow-wrap: anywhere;
 }
-.example { margin: 0 0 6px; font-size: 15.5px; line-height: 1.5; color: var(--fg-dim); }
-.example-ru { font-size: 14px; color: var(--fg-faint); }
+.example { margin: 0 0 6px; font-size: var(--t-lg); line-height: 1.5; color: var(--fg-dim); }
+.example-ru { font-size: var(--t-md); color: var(--fg-faint); }
 
 /* ---------- кнопки ---------- */
 
@@ -397,7 +417,7 @@ body {
 .btn-primary {
   width: 100%;
   margin-top: var(--s3);
-  font-size: 17px;
+  font-size: var(--t-xl);
   color: #fff;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-color: transparent;
@@ -405,7 +425,7 @@ body {
 }
 .btn-primary:active { box-shadow: 0 6px 16px -12px rgba(53, 102, 234, .75); }
 
-.btn-quiet { width: 100%; margin-top: var(--s2); font-size: 15px; color: var(--fg-dim); }
+.btn-quiet { width: 100%; margin-top: var(--s2); font-size: var(--t-lg); color: var(--fg-dim); }
 
 /* оценки: не стекло — тонировка. Четыре стекла тут стоили бы кадров */
 .ratings {
@@ -418,7 +438,7 @@ body {
 
 .rate {
   position: relative;
-  font-size: 15px;
+  font-size: var(--t-lg);
   font-weight: 650;
   border: 1px solid transparent;
   /* появляются лестницей: глаз успевает прочитать порядок */
@@ -440,7 +460,7 @@ body {
 
 .key {
   position: absolute; top: 5px; right: 8px;
-  font-size: 10px; font-weight: 500; opacity: .45;
+  font-size: var(--t-2xs); font-weight: 500; opacity: .45;
 }
 @media (pointer: coarse) { .key { display: none; } }
 
@@ -451,7 +471,7 @@ body {
   animation: card-in 360ms var(--ease) both;
 }
 .state h1 {
-  font-size: clamp(26px, 7vw, 34px);
+  font-size: var(--h-screen);
   font-weight: 650;
   letter-spacing: -.02em;
   margin: 0 0 var(--s2);
@@ -516,7 +536,7 @@ body {
 .g-back:active { transform: scale(.9); }
 
 .home-title {
-  font-size: 28px;
+  font-size: var(--h-screen);
   font-weight: 700;
   letter-spacing: -.025em;
   color: var(--fg);
@@ -548,17 +568,17 @@ body {
 .tile-wide { width: 100%; }
 
 .tile-name {
-  font-size: 21px;
+  font-size: var(--t-3xl);
   font-weight: 700;
   letter-spacing: -.015em;
   color: var(--fg);
 }
-.tile-sub { font-size: 14px; color: var(--fg-dim); }
-.tile-count { font-size: 13px; color: var(--fg-faint); }
+.tile-sub { font-size: var(--t-md); color: var(--fg-dim); }
+.tile-count { font-size: var(--t-sm); color: var(--fg-faint); }
 
 .picker-or {
   margin: var(--s3) 0 var(--s2);
-  font-size: 13px;
+  font-size: var(--t-sm);
   color: var(--fg-faint);
   text-transform: lowercase;
 }
@@ -586,15 +606,15 @@ body {
 .pattern-row:active { transform: scale(.99); }
 
 .pattern-main { display: grid; gap: 2px; min-width: 0; }
-.pattern-label { font-size: 15px; font-weight: 680; color: var(--fg); letter-spacing: -.01em; }
-.pattern-title { font-size: 13px; color: var(--fg-dim); }
+.pattern-label { font-size: var(--t-lg); font-weight: 680; color: var(--fg); letter-spacing: -.01em; }
+.pattern-title { font-size: var(--t-sm); color: var(--fg-dim); }
 .pattern-meta { display: grid; gap: 4px; justify-items: end; flex: 0 0 auto; }
-.pattern-pool { font-size: 11px; color: var(--fg-faint); }
+.pattern-pool { font-size: var(--t-2xs); color: var(--fg-faint); }
 
 .badge {
-  font-size: 11px;
+  font-size: var(--t-2xs);
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(16, 26, 51, .06);
   color: var(--fg-dim);
   white-space: nowrap;
@@ -606,15 +626,15 @@ body {
 
 .ghint-line {
   margin: 0 0 var(--s2);
-  font-size: 13px;
+  font-size: var(--t-sm);
   color: var(--fg-faint);
 }
 
-.prompt-ru { font-size: 19px; }
+.prompt-ru { font-size: var(--t-2xl); }
 
 .g-stem {
   margin: 0 0 var(--s2);
-  font-size: 18px;
+  font-size: var(--t-2xl);
   line-height: 1.5;
   color: var(--fg);
 }
@@ -643,7 +663,7 @@ body {
 }
 .slots:empty::before {
   content: attr(data-empty);
-  font-size: 13px;
+  font-size: var(--t-sm);
   color: var(--fg-faint);
   align-self: center;
 }
@@ -674,7 +694,7 @@ body {
   padding: 12px 14px;
   border-radius: var(--r-md);
   background: rgba(110, 76, 240, .07);
-  font-size: 14px;
+  font-size: var(--t-md);
   line-height: 1.55;
   color: var(--fg-dim);
 }
@@ -689,12 +709,12 @@ body {
 .hint-penalty {
   display: block;
   margin-top: 8px;
-  font-size: 11px;
+  font-size: var(--t-2xs);
   color: var(--fg-faint);
 }
 
 .verdict { margin-top: var(--s2); }
-.verdict-line { margin: 0 0 6px; font-size: 15px; font-weight: 620; }
+.verdict-line { margin: 0 0 6px; font-size: var(--t-lg); font-weight: 620; }
 .verdict-line.ok { color: var(--good-ink); }
 .verdict-line.bad { color: var(--again-ink); }
 
@@ -896,7 +916,7 @@ a.tag-accent { text-decoration: none; }
   background: transparent;
   color: var(--accent);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--t-lg);
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -906,7 +926,7 @@ a.tag-accent { text-decoration: none; }
   cursor: pointer;
   flex: 0 0 auto;
 }
-.g-back-chevron { font-size: 22px; line-height: 1; margin-top: -2px; }
+.g-back-chevron { font-size: var(--t-3xl); line-height: 1; margin-top: -2px; }
 .g-back:active { opacity: .55; transition-timing-function: var(--spring); }
 
 .field { display: flex; align-items: center; gap: var(--s1); }
@@ -920,7 +940,7 @@ a.tag-accent { text-decoration: none; }
   background: rgba(53, 102, 234, .09);
   color: var(--easy-ink);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--t-md);
   font-weight: 600;
   padding: 12px 14px;
   border-radius: var(--r-sm);
@@ -967,13 +987,13 @@ a.tag-accent { text-decoration: none; }
   color: var(--accent);
   line-height: 1.05;
 }
-.st-big span { font-size: 11.5px; color: var(--fg-faint); }
+.st-big span { font-size: var(--t-2xs); color: var(--fg-faint); }
 
 .st-grid { display: grid; gap: var(--s2); margin-bottom: var(--s3); }
 
 .st-title {
   margin: 0 0 var(--s1);
-  font-size: 15px;
+  font-size: var(--t-lg);
   font-weight: 700;
   letter-spacing: -.01em;
 }
@@ -983,7 +1003,7 @@ a.tag-accent { text-decoration: none; }
   justify-content: space-between;
   gap: var(--s1);
   padding: 5px 0;
-  font-size: 13.5px;
+  font-size: var(--t-sm);
   border-top: 1px solid rgba(94, 118, 214, .12);
 }
 .st-row:first-of-type { border-top: 0; }
@@ -1013,7 +1033,7 @@ a.tag-accent { text-decoration: none; }
 
 .st-ach {
   padding: var(--s2);
-  border-radius: 14px;
+  border-radius: var(--r-sm);
   background: rgba(255, 255, 255, .42);
   border: 1px solid rgba(94, 118, 214, .16);
   display: grid;
@@ -1027,11 +1047,11 @@ a.tag-accent { text-decoration: none; }
   border-color: rgba(17, 69, 216, .28);
 }
 .st-ach-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.st-ach-title { font-size: 13.5px; font-weight: 700; }
+.st-ach-title { font-size: var(--t-sm); font-weight: 700; }
 .st-ach.is-on .st-ach-title { color: var(--accent); }
 .st-ach-mark { color: var(--accent); font-weight: 700; }
-.st-ach-note { margin: 0; font-size: 12px; line-height: 1.35; color: var(--fg-dim); }
-.st-ach-num { font-size: 11px; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+.st-ach-note { margin: 0; font-size: var(--t-xs); line-height: 1.35; color: var(--fg-dim); }
+.st-ach-num { font-size: var(--t-2xs); color: var(--fg-faint); font-variant-numeric: tabular-nums; }
 
 .st-prog {
   height: 5px;
@@ -1052,16 +1072,16 @@ a.tag-accent { text-decoration: none; }
   gap: 2px;
   margin: 0 0 var(--s3);
   padding: var(--s2);
-  border-radius: 14px;
+  border-radius: var(--r-sm);
   background: rgba(255, 255, 255, .46);
   border: 1px solid rgba(94, 118, 214, .16);
 }
-.pulse-status { font-size: 14px; font-weight: 700; color: var(--accent); }
+.pulse-status { font-size: var(--t-md); font-weight: 700; color: var(--accent); }
 .pulse-status.is-free { color: var(--fg-dim); }
 /* Долг подсвечивается тем же цветом, что и оценка «не помню»: один смысл — один
    цвет на всё приложение, иначе красный начинает значить что попало. */
 .pulse-status.is-debt { color: var(--again-ink); }
-.pulse-line { font-size: 12.5px; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+.pulse-line { font-size: var(--t-xs); color: var(--fg-faint); font-variant-numeric: tabular-nums; }
 
 /* Пауза — тихая кнопка под основным действием: она нужна редко, но должна быть
    на виду именно в момент, когда человек решает уйти. */
@@ -1075,7 +1095,7 @@ a.tag-accent { text-decoration: none; }
 .gloss > summary {
   cursor: pointer;
   list-style: none;
-  font-size: 11px;
+  font-size: var(--t-2xs);
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -1088,7 +1108,7 @@ a.tag-accent { text-decoration: none; }
 
 .gloss-words {
   margin: 4px 0 0;
-  font-size: 13.5px;
+  font-size: var(--t-sm);
   line-height: 1.5;
   color: var(--fg-dim);
 }
@@ -1098,7 +1118,63 @@ a.tag-accent { text-decoration: none; }
   margin: var(--s1) 0 0;
   padding-left: 10px;
   border-left: 2px solid var(--accent);
-  font-size: 13px;
+  font-size: var(--t-sm);
   line-height: 1.45;
   color: var(--fg-dim);
+}
+
+
+/* ===========================================================================
+   Фокус.
+
+   В файле не было НИ ОДНОГО правила :focus-visible, при том что у приложения
+   есть клавиатурные сокращения: пробел раскрывает карточку, цифры 1-4 ставят
+   оценку. То есть клавиатурой пользоваться предполагалось, а где стоит фокус —
+   было видно только по умолчанию браузера, поверх стекла почти неразличимому.
+
+   Именно :focus-visible, а не :focus — иначе кольцо вспыхивает на каждом тапе
+   пальцем, и это первое, что заставляет разработчиков написать outline: none.
+   ========================================================================= */
+
+:where(button, a, summary, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* У полей рамка и так меняется по фокусу, кольцо поверх неё лишнее — но убирать
+   его целиком нельзя, поэтому оно прижато к самой рамке. */
+.typebox:focus-visible { outline-offset: 0; }
+
+/* ===========================================================================
+   Зона нажатия.
+
+   Замерено на 390x844: «?» была 26x26, кнопка «домой» 40 в высоту, переключатель
+   разбора 24. Норма — 44x44 (Apple HIG), и именно по «?» владелец жаловался,
+   что попасть трудно.
+
+   Зона расширяется псевдоэлементом, а не размером самого элемента: кружок «?»
+   должен остаться маленьким на вид. Увеличить его — значит чинить промах ценой
+   композиции.
+   ========================================================================= */
+
+.g-help { position: relative; }
+.g-help::after {
+  content: '';
+  position: absolute;
+  /* 26 + 9*2 = 44 */
+  inset: -9px;
+}
+
+/* Класс тут .g-back, не .home-btn: id и класс у этой кнопки разные, и селектор
+   по id-подобному имени просто не сработал бы молча. */
+.g-back { min-height: 44px; display: inline-flex; align-items: center; }
+
+/* Переключатель разбора — строка, поэтому растёт только по высоте.
+   46, а не 44: при min-height ровно 44 замер давал 43 — округление вниз от
+   дробной высоты строки внутри details. Норму надо перекрывать, а не задевать. */
+.gloss > summary {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
 }

@@ -33,7 +33,7 @@ for t in test/fsrs.test.mjs test/session.test.mjs test/auth.test.mjs \
          test/gloss.test.mjs \
          test/answer.test.mjs test/grammar-client.test.mjs test/bot-commands.test.mjs \
          test/grammar-server.test.mjs test/grammar-import.test.mjs test/grammar-e2e.test.mjs \
-         test/dom-ids.test.mjs test/css-hidden.test.mjs test/theme.test.mjs test/contrast.test.mjs test/css-perf.test.mjs test/decor.test.mjs \
+         test/dom-ids.test.mjs test/css-hidden.test.mjs test/theme.test.mjs test/contrast.test.mjs test/css-perf.test.mjs test/decor.test.mjs test/design-system.test.mjs \
          test/guide-html.test.mjs; do
   echo "── $t"
   node "$t" || fail=1
