@@ -9,6 +9,13 @@
 .g-main {
   flex: 1;
   display: grid;
+  /* minmax(0, 1fr), а НЕ значение по умолчанию.
+     Неявная колонка грида имеет размер `auto`, который тянется к max-content и не
+     сжимается до контейнера: на 500px оглавление раздувалось до 669px, страница
+     уезжала вбок на 193px, и правый край карточки уходил за экран. В медиа-запросе
+     ниже minmax(0, 1fr) стоял с самого начала — значит про ловушку знали, а базовый
+     (мобильный) случай остался без неё. Телефон здесь основной сценарий. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s3);
   align-content: start;
   padding: var(--s3);
@@ -21,9 +28,31 @@
   .g-toc { position: sticky; top: 76px; }
 }
 
+/* На телефоне оглавление из тринадцати пунктов занимало 503px и отжимало сам текст
+   на 592px — гайд открывался списком ссылок, а не гайдом. Свёрнутое по умолчанию,
+   на широком экране оно снова раскрыто и живёт в своей колонке. */
+.g-toc[open] > summary { margin-bottom: var(--s1); }
+.g-toc > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 7px 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.g-toc > summary::-webkit-details-marker { display: none; }
+.g-toc > summary::after { content: ' ▾'; }
+.g-toc[open] > summary::after { content: ' ▴'; }
+@media (min-width: 900px) {
+  .g-toc > summary { display: none; }
+}
+
 /* ---------- содержание ---------- */
 
-.g-toc { padding: var(--s2); display: grid; gap: 2px; animation: none; }
+.g-toc { padding: var(--s2); display: block; animation: none; }
+.g-toc a + a { margin-top: 2px; }
 .g-toc-title {
   margin: 0 0 var(--s1);
   padding: 0 10px;

@@ -14,7 +14,8 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const md = readFileSync(join(here, '..', 'docs', 'guide.md'), 'utf8');
-const html = readFileSync(join(here, '..', 'app', 'guide.html'), 'utf8');
+const root = join(here, '..');
+const html = readFileSync(join(root, 'app', 'guide.html'), 'utf8');
 
 let passed = 0; const failures = [];
 function check(name, fn) {
@@ -100,6 +101,32 @@ check('гайд переиспользует стили приложения, а
   assert(hardcoded.length <= 3,
     'в guide.css ' + hardcoded.length + ' захардкоженных цветов (' + hardcoded.join(', ') +
     ') — токены должны браться из styles.css, иначе темы разъедутся');
+});
+
+
+/**
+ * Дефект, ради которого эта пара проверок существует, был измерен, а не замечен:
+ * на ширине 500px страница уезжала вбок на 193px, потому что неявная колонка грида
+ * имеет размер `auto` и НЕ сжимается до контейнера — оглавление раздувалось до
+ * 669px. В медиа-запросе для широкого экрана minmax(0, 1fr) стоял изначально,
+ * то есть ловушку знали, а базовый мобильный случай остался без неё.
+ */
+const guideCss = readFileSync(join(root, 'app', 'guide.css'), 'utf8');
+
+check('базовое правило .g-main задаёт колонку, которая умеет сжиматься', () => {
+  const base = guideCss.match(/\.g-main\s*\{([^}]*)\}/);
+  assert(base, 'правило .g-main не найдено');
+  assert(/grid-template-columns:\s*minmax\(\s*0/.test(base[1]),
+    'в базовом .g-main нет grid-template-columns: minmax(0, ...) — колонка раздуется ' +
+    'до max-content и страница уедет вбок на телефоне');
+});
+
+check('оглавление сворачивается на телефоне', () => {
+  assert(/<details class="g-toc card">/.test(html),
+    'оглавление не <details> — на телефоне тринадцать пунктов отжимают текст за сгиб');
+  assert(/<summary>/.test(html), 'у оглавления нет <summary>');
+  assert(!/ open>/.test(html.match(/<details[^>]*>/)[0]),
+    'раскрыто атрибутом: тогда на телефоне оно снова займёт первый экран');
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

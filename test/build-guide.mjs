@@ -160,17 +160,28 @@ const page = '<!doctype html>\n' +
 '  <span class="counter">Гайд</span>\n' +
 '</header>\n\n' +
 '<main class="g-main">\n' +
-'  <nav class="g-toc card">\n' +
-'    <p class="g-toc-title">Содержание</p>\n    ' +
+'  <details class="g-toc card">\n' +
+'    <summary>Содержание</summary>\n    ' +
 toc.map(t => '<a href="#' + t.id + '">' + esc(t.text) + '</a>').join('\n    ') + '\n' +
-'  </nav>\n\n' +
+'  </details>\n\n' +
 '  <article class="g-doc card">\n' + html + '\n  </article>\n' +
 '</main>\n\n' +
 '<script>\n' +
 '  (function () {\n' +
 '    var tg = window.Telegram && window.Telegram.WebApp;\n' +
 '    if (tg) { tg.ready(); tg.expand(); }\n' +
+'    var toc = document.querySelector(".g-toc");\n' +
+'    // Раскрытость задаётся здесь, а не атрибутом open: CSS не умеет открыть\n' +
+'    // details, а на телефоне тринадцать пунктов отжимали текст гайда за экран.\n' +
+'    function fitToc() { toc.open = window.matchMedia("(min-width: 900px)").matches; }\n' +
+'    fitToc();\n' +
+'    window.addEventListener("resize", fitToc);\n' +
 '    var links = [].slice.call(document.querySelectorAll(".g-toc a"));\n' +
+'    links.forEach(function (a) {\n' +
+'      a.addEventListener("click", function () {\n' +
+'        if (!window.matchMedia("(min-width: 900px)").matches) toc.open = false;\n' +
+'      });\n' +
+'    });\n' +
 '    var heads = links.map(function (a) { return document.querySelector(a.getAttribute("href")); });\n' +
 '    function mark() {\n' +
 '      var y = window.scrollY + 140, active = 0;\n' +
