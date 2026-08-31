@@ -720,8 +720,12 @@ a.tag-accent { text-decoration: none; }
 
 .filters { position: absolute; width: 0; height: 0; overflow: hidden; }
 
+/* relative, а НЕ absolute. Абсолютный svg внутри .drift оставлял обёртке нулевую
+   высоту, и фигура свисала вниз от её верхнего угла: кольца с `bottom: 6vh`
+   оказывались ниже экрана, хотя по стилю должны стоять над нижним краем. */
 .decor svg {
-  position: absolute;
+  position: relative;
+  display: block;
   fill: none;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -733,10 +737,13 @@ a.tag-accent { text-decoration: none; }
 /* Самолёт: крупный, синий, уходит вверх-вправо за край и возвращается.
    Уход подчёркнут прозрачностью на дальнем конце — иначе он просто обрезается
    рамкой, и это читается как баг, а не как полёт. */
+/* Ширина в vw и меньше экрана: при 56vmax самолёт был 471px на экране 390 и
+   торчал за оба края сразу — чертёж, который не видно целиком, не читается как
+   чертёж. Сдвиги в анимации тоже переведены в vw/vh по той же причине. */
 .drift-plane {
-  width: 56vmax;
-  right: -8vmax;
-  top: 4vmax;
+  width: 88vw;
+  right: 6vw;
+  top: 7vh;
   animation: takeoff 34s var(--ease) infinite alternate;
 }
 
@@ -748,16 +755,19 @@ a.tag-accent { text-decoration: none; }
   stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: .26;
+  opacity: .34;
 }
 
 /* Было 78vmax при opacity .2: кольца перекрывали пол-экрана и при этом почти не
    читались — большая бледная дуга воспринимается как градиент, а не как знак.
    Меньше и контрастнее: узнаётся как логотип, а не как фон. */
+/* Размер в vw, а не vmax, и это не вкусовщина: на телефоне vmax — это ВЫСОТА,
+   поэтому 38vmax давали 321px на экране шириной 390 — знак во весь экран. В vw
+   размер предсказуем там, где приложение и живёт. */
 .drift-rings {
-  width: 38vmax;
-  left: 4vmax;
-  bottom: 5vmax;
+  width: 46vw;
+  left: 6vw;
+  bottom: 6vh;
   animation: roll 44s var(--ease) infinite alternate;
 }
 
@@ -777,10 +787,10 @@ a.tag-accent { text-decoration: none; }
    отрицательный на всём цикле: машина и взлетает, и заходит на посадку с поднятым
    носом, круче всего в наборе. */
 @keyframes takeoff {
-  0%   { transform: translate3d(0, 13vmax, 0) rotate(-3deg); opacity: 1; }
-  45%  { transform: translate3d(10vmax, -20vmax, 0) rotate(-13deg); opacity: .4; }
-  55%  { transform: translate3d(11vmax, -24vmax, 0) rotate(-14deg); opacity: .24; }
-  100% { transform: translate3d(-6vmax, 18vmax, 0) rotate(-4deg); opacity: 1; }
+  0%   { transform: translate3d(0, 9vh, 0) rotate(-3deg); opacity: 1; }
+  45%  { transform: translate3d(5vw, -20vh, 0) rotate(-13deg); opacity: .5; }
+  55%  { transform: translate3d(6vw, -25vh, 0) rotate(-14deg); opacity: .3; }
+  100% { transform: translate3d(-4vw, 13vh, 0) rotate(-4deg); opacity: 1; }
 }
 
 @keyframes roll {
