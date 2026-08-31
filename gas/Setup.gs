@@ -104,7 +104,7 @@ function backfillFirstReview() {
     if (!c.last_review) return;                 // ещё ни разу не показывалась
     updates.push({
       _row: c._row,
-      patch: { first_review: String(c.last_review).slice(0, 10) }
+      patch: { first_review: dateKey_(c.last_review) }
     });
   });
   var written = writeCardUpdates_(updates);

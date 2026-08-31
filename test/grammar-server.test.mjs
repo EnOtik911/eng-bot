@@ -253,5 +253,23 @@ check('батч без id отклоняется', () => {
   assert(res.ok === false && res.code === 'BAD_REQUEST', JSON.stringify(res));
 });
 
+
+/**
+ * Та же форма данных, что и в session-server: живая таблица отдаёт даты объектами
+ * Date, а не строками. Шаблоны фильтруются по сроку своим кодом, значит и ломаться
+ * могут отдельно от лексики.
+ */
+check('шаблон со сроком возвращается, когда дата пришла объектом Date', () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const past = new Date(Date.parse(today + 'T00:00:00Z') - 3 * 86400000);
+  const g = load({
+    patterns: [pattern({ pattern_id: 'p_due', state: 'review', due: past })],
+    items: Array.from({ length: 12 }, (_, i) =>
+      item({ item_id: 'i' + i, pattern_id: 'p_due' }))
+  }).buildGrammarSession('1');
+  assert(g.counts.due === 1,
+    'к повторению ' + g.counts.due + ' вместо 1 — сравнение срока не понимает объект Date');
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) process.exit(1);

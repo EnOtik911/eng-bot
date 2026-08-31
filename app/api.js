@@ -28,6 +28,13 @@
         .then(function (r) { return r.json(); });
     },
 
+    /** Метрики и ачивки. Считает сервер: журнал на телефон не тащим. */
+    getStats: function () {
+      var url = base() + '?action=stats&initData=' + encodeURIComponent(initData());
+      return fetch(url, { method: 'GET', redirect: 'follow' })
+        .then(function (r) { return r.json(); });
+    },
+
     getGrammar: function () {
       var url = base() + '?action=grammar&initData=' + encodeURIComponent(initData());
       return fetch(url, { method: 'GET', redirect: 'follow' })

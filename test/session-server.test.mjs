@@ -183,5 +183,57 @@ check('applyFlush не перезаписывает уже стоящий first_
     'первая дата не должна меняться, а пришло ' + patch.first_review);
 });
 
+
+/**
+ * Форма данных, которая приходит из ЖИВОЙ таблицы.
+ *
+ * Весь набор выше подставляет даты строками — и потому четыре месяца не видел
+ * дефекта: getValues() возвращает сырые значения, а Google Sheets молча
+ * превращает записанную строку '2026-08-28' в дату. Обратно приходит объект Date,
+ * String(date).slice(0, 10) даёт 'Sun Aug 28', и это не равно ни одной дате и
+ * БОЛЬШЕ любой '2026-..' при лексикографическом сравнении. Значит 'due <= today'
+ * вечно ложно: карточка со сроком не возвращается никогда.
+ *
+ * Ровно тот случай, ради которого правило «зелёный тест не доказательство»
+ * и написано: тест подставлял форму, которой в проде нет.
+ */
+const asSheetDate = (ymd) => new Date(Date.parse(ymd + 'T00:00:00Z'));
+
+check('карточка со сроком возвращается, когда дата пришла объектом Date', () => {
+  const { buildSession } = load({ cards: [
+    card({ card_id: 'due1', state: 'review', due: asSheetDate(dayShift(-2)) }),
+    card({ card_id: 'due2', state: 'review', due: asSheetDate(TODAY) }),
+    card({ card_id: 'later', state: 'review', due: asSheetDate(dayShift(5)) })
+  ]});
+  const s = buildSession('1');
+  assert(s.counts.due === 2,
+    'к повторению ' + s.counts.due + ' вместо 2 — сравнение даты не понимает объект Date');
+  const ids = s.cards.map(c => c.card_id).sort().join(',');
+  assert(ids === 'due1,due2', 'в очереди: ' + ids);
+});
+
+check('дневная норма видит новые, введённые сегодня, когда дата пришла объектом Date', () => {
+  const { buildSession } = load({
+    settings: { daily_new_target: '6' },
+    cards: [
+      card({ card_id: 'a', state: 'review', first_review: asSheetDate(TODAY), due: asSheetDate(dayShift(9)) }),
+      card({ card_id: 'b', state: 'review', first_review: asSheetDate(TODAY), due: asSheetDate(dayShift(9)) }),
+      ...Array.from({ length: 20 }, (_, i) => card({ card_id: 'n' + i, state: 'new', due: '' }))
+    ]
+  });
+  const s = buildSession('1');
+  assert(s.counts.new_introduced_today === 2,
+    'введено сегодня ' + s.counts.new_introduced_today + ' вместо 2 — норма не учитывает ' +
+    'уже введённое, и каждый запуск приложения выдаёт полную порцию новых заново');
+  assert(s.counts.new_in_session === 4,
+    'выдаётся ' + s.counts.new_in_session + ' новых вместо 4 (6 минус 2 введённых)');
+});
+
+check('elapsed_days для планировщика считается и по объекту Date', () => {
+  const { daysBetween_ } = load({ cards: [] });
+  const n = daysBetween_(asSheetDate(dayShift(-7)), TODAY);
+  assert(n === 7, 'прошло дней: ' + n + ' — в FSRS уехало бы NaN, а с ним стабильность и сложность');
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) process.exit(1);

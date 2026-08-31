@@ -14,7 +14,10 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
-const src = readFileSync(join(root, 'gas', 'Bot.gs'), 'utf8');
+// Session.gs подключается ради dateKey_: dailyPing фильтрует карточки по сроку,
+// и подменять нормализацию даты заглушкой значило бы проверять всё, кроме неё.
+const src = readFileSync(join(root, 'gas', 'Session.gs'), 'utf8') + '\n' +
+  readFileSync(join(root, 'gas', 'Bot.gs'), 'utf8');
 
 let passed = 0; const failures = [];
 function check(name, fn) {
@@ -30,12 +33,13 @@ function assert(c, m) { if (!c) throw new Error(m); }
  */
 const DEPS = ['cfgAllowlist_', 'CacheService', 'loadEverything', 'buildSession',
   'PropertiesService', 'UrlFetchApp', 'Logger', 'cfg_', 'readSettings_', 'writeSetting_',
-  'readCards_', 'readPatterns_', 'readGrammarItems_', 'todayStr_',
+  'readCards_', 'readPatterns_', 'readGrammarItems_', 'todayStr_', 'Utilities',
+  'VALID_LAYERS', 'writeCardUpdates_', 'appendReviewLog_', 'flushSeen_', 'flushRecord_',
   'sendMessage_', 'launchKeyboard_'];
 
 function load(env) {
   // Объявляем только то, чего в самом файле нет: объявленное там перекрывается ниже.
-  const declaredInFile = ['sendMessage_', 'launchKeyboard_'];
+  const declaredInFile = ['sendMessage_', 'launchKeyboard_', 'todayStr_'];
   const prelude = 'var ' + DEPS.filter(n => !declaredInFile.includes(n)).join(', ') + ';\n';
   const epilogue = '\n' + DEPS
     .map(n => n + ' = env.' + n + ' !== undefined ? env.' + n + ' : ' + n + ';').join('\n') +
@@ -120,6 +124,7 @@ function pingHarness(over) {
   const env = {
     cfgAllowlist_: () => ['686280935'],
     Logger: { log() {} },
+    Utilities: { formatDate: (d) => new Date(d).toISOString().slice(0, 10) },
     readSettings_: () => ({ timezone: 'Europe/Moscow', daily_new_target: '10',
       grammar_daily_new_target: '1', ...(over && over.settings) }),
     writeSetting_: (k, v) => { written[k] = v; },

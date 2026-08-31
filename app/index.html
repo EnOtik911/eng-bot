@@ -211,9 +211,44 @@
         <span class="tile-sub">времена и порядок слов, по шаблонам</span>
         <span id="tile-grammar-count" class="tile-count"></span>
       </button>
+      <button id="tile-stats" class="tile">
+        <span class="tile-name">Прогресс</span>
+        <span class="tile-sub">по блокам, динамика и ачивки</span>
+        <span id="tile-stats-count" class="tile-count"></span>
+      </button>
     </div>
     <button id="resume-vocab" class="btn" hidden></button>
     <p id="home-note" class="hint" hidden></p>
+  </section>
+
+  <section id="screen-stats" hidden class="state">
+    <h1 class="home-title">Прогресс</h1>
+    <div id="st-summary" class="st-summary"></div>
+    <!-- Карточки стоят в разметке, а не печатаются из stats.js: .card несёт
+         backdrop-filter, и класс, присваиваемый кодом, снимает всякую границу с
+         числа стёкол на экране. Ровно этот дефект уже ловили на списке шаблонов
+         (см. css-perf.test.mjs). JS заполняет только начинку. -->
+    <div class="st-grid">
+      <article class="card"><h2 class="st-title">Лексика</h2><div id="st-vocab"></div></article>
+      <article class="card"><h2 class="st-title">Грамматика</h2><div id="st-grammar"></div></article>
+    </div>
+    <div class="st-grid">
+      <article class="card">
+        <h2 class="st-title">Повторений по дням</h2>
+        <div id="st-chart-reviews"></div>
+        <p id="st-chart-reviews-note" class="hint"></p>
+      </article>
+      <article class="card">
+        <h2 class="st-title">Освоено единиц</h2>
+        <div id="st-chart-learned"></div>
+        <p id="st-chart-learned-note" class="hint"></p>
+      </article>
+    </div>
+    <div class="st-ach-head-row">
+      <h2 class="st-title">Ачивки</h2>
+      <span id="st-ach-count" class="hint"></span>
+    </div>
+    <div id="st-achievements" class="st-ach-grid"></div>
   </section>
 
   <section id="screen-picker" hidden class="state">
@@ -307,6 +342,7 @@
 <script src="session.js"></script>
 <script src="grammar.js"></script>
 <script src="ui.js"></script>
+<script src="stats.js"></script>
 <script src="grammar-ui.js"></script>
 </body>
 </html>

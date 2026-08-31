@@ -92,7 +92,10 @@ var DEFAULT_SETTINGS = {
   timezone: 'Europe/Moscow',
   ui_lang: 'ru',
   last_trigger_run: '',
-  webhook_last_check: ''
+  webhook_last_check: '',
+  // Список выданных ачивок через запятую. Нужен ровно для одного: объявить новую
+  // в чате один раз. Экран прогресса выводит список из метрик и в это поле не смотрит.
+  achievements: ''
 };
 
 function cfg_(key) {

@@ -51,6 +51,7 @@
 
   var SCREENS = ['screen-loading', 'screen-home', 'screen-picker', 'screen-card',
     'screen-grammar', 'screen-round', 'screen-gdone', 'screen-empty', 'screen-done',
+    'screen-stats',
     'screen-error'];
 
   var CHROME_FREE = ['screen-home', 'screen-picker', 'screen-loading', 'screen-error'];
@@ -388,6 +389,7 @@
 
   /** Один смысл «назад» на всё приложение: из любого экрана — на главный. */
   function goBack() {
+    if (currentScreen === 'screen-stats') { renderHome(); return; }
     if (currentScreen === 'screen-grammar' || currentScreen === 'screen-round' ||
         currentScreen === 'screen-gdone') {
       // Из упражнения — сначала к выбору шаблона, оттуда домой.
@@ -473,6 +475,9 @@
     bindKeyboard(el('typebox'), el('typebox-done'), el('typefield'));
     el('tile-vocab').addEventListener('click', startVocab);
     el('resume-vocab').addEventListener('click', startVocab);
+    el('tile-stats').addEventListener('click', function () {
+      if (window.Stats) window.Stats.open();
+    });
     el('practice-empty').addEventListener('click', startPractice);
     el('practice-done').addEventListener('click', startPractice);
     el('tile-grammar').addEventListener('click', function () {
@@ -529,6 +534,7 @@
     T: T,
     tg: tg,
     errorText: errorText,
+    showError: showError,
     goHome: renderHome,
     refreshPending: refreshPending,
     flushGrammar: flushGrammar,

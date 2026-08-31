@@ -105,7 +105,10 @@ var DEFAULT_SETTINGS = {
   timezone: 'Europe/Moscow',
   ui_lang: 'ru',
   last_trigger_run: '',
-  webhook_last_check: ''
+  webhook_last_check: '',
+  // Список выданных ачивок через запятую. Нужен ровно для одного: объявить новую
+  // в чате один раз. Экран прогресса выводит список из метрик и в это поле не смотрит.
+  achievements: ''
 };
 
 function cfg_(key) {
@@ -808,14 +811,39 @@ function diagInitData(initData) {
  * One GET per session, one POST per session — see docs/deploy.md for why.
  */
 
+/**
+ * Дата из таблицы в вид 'YYYY-MM-DD'.
+ *
+ * getValues() возвращает СЫРЫЕ значения ячеек, а Google Sheets молча превращает
+ * записанную строку '2026-08-28' в дату. Обратно она приходит объектом Date, и
+ * String(date).slice(0, 10) даёт 'Sun Aug 28' — строку, которая не равна ни одной
+ * дате и при этом БОЛЬШЕ любой '2026-..' при лексикографическом сравнении.
+ *
+ * Поэтому условие `due <= today` было вечно ложным: карточка, у которой наступил
+ * срок, не возвращалась НИКОГДА. По той же причине дневная норма считала, что
+ * сегодня не введено ничего, и выдавала полную порцию новых на каждый запуск, а
+ * daysBetween_ отдавал NaN — прямо в планировщик, вместе со стабильностью.
+ *
+ * Юнит-тесты этого не видели четыре месяца, потому что подставляли даты СТРОКАМИ —
+ * форму, которой в живой таблице нет.
+ */
+function dateKey_(v, tz) {
+  if (v === null || v === undefined || v === '') return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    if (isNaN(v.getTime())) return '';
+    return Utilities.formatDate(v, tz || 'Europe/Moscow', 'yyyy-MM-dd');
+  }
+  return String(v).slice(0, 10);
+}
+
 function todayStr_(tz) {
   return Utilities.formatDate(new Date(), tz || 'Europe/Moscow', 'yyyy-MM-dd');
 }
 
-function daysBetween_(fromStr, toStr) {
-  if (!fromStr) return 0;
-  var a = new Date(String(fromStr).slice(0, 10) + 'T00:00:00Z').getTime();
-  var b = new Date(String(toStr).slice(0, 10) + 'T00:00:00Z').getTime();
+function daysBetween_(from, to) {
+  var a = Date.parse(dateKey_(from) + 'T00:00:00Z');
+  var b = Date.parse(dateKey_(to) + 'T00:00:00Z');
+  if (isNaN(a) || isNaN(b)) return 0;
   return Math.max(Math.round((b - a) / 86400000), 0);
 }
 
@@ -839,7 +867,7 @@ function buildSession(userId) {
   mine.forEach(function (c) {
     // Сколько новых уже введено сегодня. Считается по строке карточки, а не по
     // журналу: планировщик журнал не читает, это условие из ADR-02.
-    if (c.first_review && String(c.first_review).slice(0, 10) === today) introducedToday++;
+    if (c.first_review && dateKey_(c.first_review, tz) === today) introducedToday++;
   });
 
   mine.forEach(function (c) {
@@ -848,7 +876,7 @@ function buildSession(userId) {
     if (state === 'suspended') return;
     if (state === 'locked') { locked++; return; }
     if (state === 'new') { fresh.push(c); return; }
-    var dueStr = c.due ? String(c.due).slice(0, 10) : '';
+    var dueStr = dateKey_(c.due, tz);
     if (dueStr && dueStr <= today) due.push(c);
   });
 
@@ -1077,6 +1105,379 @@ function applyFlush(userId, batchId, reviews) {
 }
 
 // ==========================================================================
+// Stats.gs
+// ==========================================================================
+
+/**
+ * Аналитика: по блокам и по общей динамике.
+ *
+ * Считается на СЕРВЕРЕ, а не на клиенте, и это то же решение, что лежит в основе
+ * всей архитектуры: журнал повторений растёт линейно со временем и уже сейчас
+ * измеряется сотнями строк, а телефон получает два запроса на сессию. Отдавать
+ * ему сырой журнал ради подсчёта среднего — тот же per-answer round trip, только
+ * в профиль.
+ *
+ * Ачивки живут отдельно (Achievements.gs) и считаются ЧИСТОЙ функцией от того,
+ * что вернёт этот файл: тогда их можно проверять без единого обращения к таблице.
+ */
+
+var STATS_WINDOW_DAYS = 30;
+
+function dayKey_(ts, tz) {
+  if (!ts) return '';
+  var d = ts instanceof Date ? ts : new Date(String(ts));
+  if (isNaN(d.getTime())) return String(ts).slice(0, 10);
+  return Utilities.formatDate(d, tz || 'Europe/Moscow', 'yyyy-MM-dd');
+}
+
+/** Список последних N дат включительно по сегодня — ось графиков. */
+function lastDays_(today, n) {
+  var out = [];
+  var base = Date.parse(today + 'T00:00:00Z');
+  for (var i = n - 1; i >= 0; i--) {
+    out.push(new Date(base - i * 86400000).toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+function readReviewLog_() { return readRows_(logSheetName_(), LOG_COLUMNS); }
+function readGrammarLog_() { return readRows_(grammarLogSheetName_(), GRAMMAR_LOG_COLUMNS); }
+
+/**
+ * Удержание — доля оценок «Помню» и «Легко» от всех повторений.
+ *
+ * Считается ТОЛЬКО по повторениям зрелых карточек, то есть без первого показа:
+ * первый ответ на невиданное слово почти всегда «не помню», и если мешать его в
+ * общую долю, метрика будет измерять темп ввода новых слов, а не память.
+ */
+function retention_(entries) {
+  var graded = entries.filter(function (e) { return Number(e.elapsed_days) > 0; });
+  if (!graded.length) return null;
+  var good = graded.filter(function (e) { return Number(e.rating) >= 3; }).length;
+  return +(good / graded.length).toFixed(3);
+}
+
+function within_(entries, days, today, tz) {
+  var edge = Date.parse(today + 'T00:00:00Z') - (days - 1) * 86400000;
+  return entries.filter(function (e) {
+    var k = dayKey_(e.ts, tz);
+    return k && Date.parse(k + 'T00:00:00Z') >= edge;
+  });
+}
+
+/** Сколько дней подряд, считая назад от сегодня, была хотя бы одна оценка. */
+function streak_(daysWithWork, today) {
+  var set = {};
+  daysWithWork.forEach(function (d) { set[d] = true; });
+  var n = 0;
+  var t = Date.parse(today + 'T00:00:00Z');
+  // Сегодняшний день не обрывает серию, если он ещё не начат: считаем со вчера,
+  // иначе утром серия обнулялась бы каждый день до первой карточки.
+  if (!set[today]) t -= 86400000;
+  while (set[new Date(t).toISOString().slice(0, 10)]) { n++; t -= 86400000; }
+  return n;
+}
+
+function buildStats(userId) {
+  var settings = readSettings_();
+  var tz = settings.timezone || 'Europe/Moscow';
+  var today = todayStr_(tz);
+  var axis = lastDays_(today, STATS_WINDOW_DAYS);
+
+  var mine = readCards_().filter(function (c) { return String(c.user_id) === String(userId); });
+  var myPatterns = readPatterns_().filter(function (p) { return String(p.user_id) === String(userId); });
+
+  var log = [], glog = [];
+  try { log = readReviewLog_(); } catch (e) { log = []; }
+  try { glog = readGrammarLog_(); } catch (e) { glog = []; }
+
+  // --- лексика ---
+  var byState = {};
+  mine.forEach(function (c) {
+    var s = String(c.state || 'new');
+    byState[s] = (byState[s] || 0) + 1;
+  });
+  var learned = mine.filter(function (c) { return c.first_review; }).length;
+  var stab = mine.filter(function (c) { return Number(c.stability) > 0; })
+    .map(function (c) { return Number(c.stability); });
+
+  // --- ряды по дням ---
+  var perDay = {}, perDayG = {}, introduced = {};
+  log.forEach(function (e) {
+    var k = dayKey_(e.ts, tz);
+    if (k) perDay[k] = (perDay[k] || 0) + 1;
+  });
+  glog.forEach(function (e) {
+    var k = dayKey_(e.ts, tz);
+    if (k) perDayG[k] = (perDayG[k] || 0) + 1;
+  });
+  mine.forEach(function (c) {
+    var k = dayKey_(c.first_review, tz);
+    if (k) introduced[k] = (introduced[k] || 0) + 1;
+  });
+
+  // Освоено накопительно: сколько единиц было введено ДО начала окна плюс прирост
+  // по дням. Без базы график начинался бы с нуля и врал бы про объём словаря.
+  var beforeWindow = 0;
+  Object.keys(introduced).forEach(function (k) { if (k < axis[0]) beforeWindow += introduced[k]; });
+  var cumulative = [], running = beforeWindow;
+  axis.forEach(function (d) { running += (introduced[d] || 0); cumulative.push(running); });
+
+  var daysWithWork = Object.keys(perDay).concat(Object.keys(perDayG));
+
+  function block(entries, cards, kind) {
+    var w7 = within_(entries, 7, today, tz), w30 = within_(entries, 30, today, tz);
+    return {
+      kind: kind,
+      total: cards.total,
+      learned: cards.learned,
+      in_progress: cards.in_progress,
+      fresh: cards.fresh,
+      leeches: cards.leeches || 0,
+      reviews_7d: w7.length,
+      reviews_30d: w30.length,
+      retention_7d: retention_(w7),
+      retention_30d: retention_(w30),
+      avg_stability_days: cards.avgStability
+    };
+  }
+
+  var vocab = block(log, {
+    total: mine.length,
+    learned: learned,
+    in_progress: (byState.review || 0) + (byState.relearning || 0),
+    fresh: byState['new'] || 0,
+    leeches: byState.leech || 0,
+    avgStability: stab.length ? +(stab.reduce(function (a, b) { return a + b; }, 0) / stab.length).toFixed(1) : null
+  }, 'vocab');
+
+  var gstab = myPatterns.filter(function (p) { return Number(p.stability) > 0; })
+    .map(function (p) { return Number(p.stability); });
+  var grammar = block(glog, {
+    total: myPatterns.length,
+    learned: myPatterns.filter(function (p) { return p.first_review; }).length,
+    in_progress: myPatterns.filter(function (p) {
+      var s = String(p.state || 'new'); return s === 'review' || s === 'relearning';
+    }).length,
+    fresh: myPatterns.filter(function (p) { return String(p.state || 'new') === 'new'; }).length,
+    avgStability: gstab.length ? +(gstab.reduce(function (a, b) { return a + b; }, 0) / gstab.length).toFixed(1) : null
+  }, 'grammar');
+
+  return {
+    ok: true,
+    server_ts: new Date().toISOString(),
+    today: today,
+    window_days: STATS_WINDOW_DAYS,
+    blocks: { vocab: vocab, grammar: grammar },
+    series: {
+      days: axis,
+      reviews: axis.map(function (d) { return perDay[d] || 0; }),
+      grammar_reviews: axis.map(function (d) { return perDayG[d] || 0; }),
+      learned_cumulative: cumulative
+    },
+    totals: {
+      reviews_all_time: log.length + glog.length,
+      streak_days: streak_(daysWithWork, today),
+      active_days: Object.keys(perDay).concat(Object.keys(perDayG))
+        .filter(function (v, i, a) { return a.indexOf(v) === i; }).length
+    }
+  };
+}
+
+/**
+ * CSV журнала повторений — чтобы анализировать чем угодно, а не только этим экраном.
+ * Разделитель — запятая, значения экранируются: в примерах встречаются и запятые,
+ * и кавычки, и перевод строки.
+ */
+function csvEscape_(v) {
+  var s = v === null || v === undefined ? '' : String(v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportReviewsCsv(userId) {
+  var cards = {};
+  readCards_().forEach(function (c) {
+    if (String(c.user_id) === String(userId)) cards[String(c.card_id)] = c;
+  });
+
+  var log = [];
+  try { log = readReviewLog_(); } catch (e) { log = []; }
+
+  var head = ['ts', 'block', 'card_id', 'en', 'ru', 'direction', 'layer', 'type',
+    'rating', 'elapsed_days', 'interval_days', 'stability', 'difficulty'];
+  var rows = [head.join(',')];
+
+  log.forEach(function (e) {
+    var c = cards[String(e.card_id)];
+    if (!c) return;   // чужие строки и удалённые карточки в выгрузку не идут
+    rows.push([e.ts, 'vocab', e.card_id, c.en, c.ru, c.direction, c.layer, c.type,
+      e.rating, e.elapsed_days, e.interval_days, e.stability, e.difficulty]
+      .map(csvEscape_).join(','));
+  });
+
+  var patterns = {};
+  readPatterns_().forEach(function (p) {
+    if (String(p.user_id) === String(userId)) patterns[String(p.pattern_id)] = p;
+  });
+  var glog = [];
+  try { glog = readGrammarLog_(); } catch (e) { glog = []; }
+  glog.forEach(function (e) {
+    var p = patterns[String(e.pattern_id)];
+    if (!p) return;
+    rows.push([e.ts, 'grammar', e.pattern_id, p.label, p.title_ru, '', '', '',
+      e.rating, e.elapsed_days, e.interval_days, e.stability, e.difficulty]
+      .map(csvEscape_).join(','));
+  });
+
+  return { csv: rows.join('\n'), rows: rows.length - 1 };
+}
+
+// ==========================================================================
+// Achievements.gs
+// ==========================================================================
+
+/**
+ * Ачивки.
+ *
+ * ЧИСТАЯ функция от того, что вернул buildStats: ни одного обращения к таблице,
+ * ни одного new Date(). Поэтому весь набор проверяется юнит-тестом на выдуманных
+ * числах, а не «прокликиванием» вживую — а прокликать тридцатидневную серию
+ * вживую нельзя в принципе.
+ *
+ * Выданные ачивки хранятся в settings отдельно (grantAchievements_), но экран
+ * от хранилища не зависит: список каждый раз выводится из метрик заново. Потеря
+ * строки в settings стоит одного уведомления в чат, а не самих достижений.
+ *
+ * Про тон: чёрный юмор — сознательный выбор владельца. Единственная граница,
+ * которую я держу сам: ни одной шутки про реальные катастрофы и погибших.
+ * Корпоративные скандалы, прокрастинация и самоирония — сколько угодно.
+ */
+
+function pct_(cur, target) {
+  if (!target) return 0;
+  return Math.max(0, Math.min(1, cur / target));
+}
+
+function evaluateAchievements(stats) {
+  var v = stats.blocks.vocab;
+  var g = stats.blocks.grammar;
+  var t = stats.totals;
+
+  var defs = [
+    { id: 'taxiing', title: 'Руление', hint: 'Первые 10 повторений',
+      note: 'Ещё никуда не летим, но двигатели уже жрут.',
+      cur: t.reviews_all_time, target: 10 },
+
+    { id: 'first_flight', title: 'Первый взлёт', hint: 'Первая закрытая сессия',
+      note: 'Отрыв произошёл. Дальше только набор высоты и турбулентность.',
+      cur: Math.min(t.reviews_all_time, 1), target: 1 },
+
+    { id: 'second_engine', title: 'Второй двигатель', hint: 'Первая сессия грамматики',
+      note: 'На одном тоже летают. Просто не так далеко.',
+      cur: Math.min(g.reviews_30d + (g.learned ? 1 : 0), 1), target: 1 },
+
+    { id: 'gear_up', title: 'Шасси убраны', hint: '3 дня подряд',
+      note: 'Три дня — это уже не случайность, это пока ещё не привычка.',
+      cur: t.streak_days, target: 3 },
+
+    { id: 'flight_level', title: 'Занял эшелон', hint: '14 дней подряд',
+      note: 'Две недели. Организм смирился.',
+      cur: t.streak_days, target: 14 },
+
+    { id: 'autopilot', title: 'Автопилот', hint: '30 дней подряд',
+      note: 'Решения принимает расписание. Ты просто на борту.',
+      cur: t.streak_days, target: 30 },
+
+    { id: 'turbo', title: 'Турбина раскрутилась', hint: '100 повторений',
+      note: 'Лаг закончился, началась тяга.',
+      cur: t.reviews_all_time, target: 100 },
+
+    { id: 'quattro', title: 'Quattro', hint: '444 повторения',
+      note: 'Четыре кольца, четыре сотни. Сцепление с материалом на всех колёсах.',
+      cur: t.reviews_all_time, target: 444 },
+
+    { id: 'black_box', title: 'Чёрный ящик', hint: '1000 повторений',
+      note: 'Записано всё. В том числе то, что ты предпочёл бы не вспоминать.',
+      cur: t.reviews_all_time, target: 1000 },
+
+    { id: 'rs6', title: 'RS6', hint: '500 повторений за 30 дней',
+      note: 'Избыточная мощность для поездки за хлебом. И всё равно берут.',
+      cur: v.reviews_30d + g.reviews_30d, target: 500 },
+
+    { id: 'overhead_bin', title: 'Багажная полка', hint: '100 освоенных единиц',
+      note: 'Ручная кладь набита. Взвешивать никто не станет.',
+      cur: v.learned, target: 100 },
+
+    { id: 'cruise', title: 'Крейсерский режим', hint: 'Средняя стабильность 21 день',
+      note: 'Материал держится сам. Можно отстегнуть ремни.',
+      cur: v.avg_stability_days || 0, target: 21 },
+
+    { id: 's_line', title: 'S line', hint: 'Удержание 90% на 50+ повторениях за неделю',
+      note: 'Внешне спортивно, под капотом обычный мотор. Работает же.',
+      cur: (v.reviews_7d >= 50 && v.retention_7d !== null) ? Math.round(v.retention_7d * 100) : 0,
+      target: 90 },
+
+    { id: 'dieselgate', title: 'Дизельгейт', hint: 'Удержание 95% за месяц',
+      note: 'Показатели подозрительно хорошие. Проверять, к счастью, некому.',
+      cur: v.retention_30d !== null ? Math.round(v.retention_30d * 100) : 0, target: 95 },
+
+    { id: 'go_around', title: 'Уход на второй круг', hint: '10 пиявок',
+      note: 'Десять слов зашли неудачно. Это не про тебя, это про формулировки.',
+      cur: v.leeches, target: 10 },
+
+    { id: 'holding', title: 'Зона ожидания', hint: '200 слов в запасе',
+      note: 'Двести единиц кружат и ждут разрешения на посадку.',
+      cur: v.fresh, target: 200 },
+
+    { id: 'maintenance', title: 'ТО пройдено', hint: '300 повторений и ни одной пиявки',
+      note: 'Ни одного узла под замену. Подозрительно.',
+      cur: (v.leeches === 0 ? t.reviews_all_time : 0), target: 300 }
+  ];
+
+  var unlocked = 0;
+  var list = defs.map(function (d) {
+    var done = d.cur >= d.target;
+    if (done) unlocked++;
+    return {
+      id: d.id, title: d.title, hint: d.hint, note: d.note,
+      unlocked: done,
+      current: Math.round(d.cur), target: d.target,
+      progress: +pct_(d.cur, d.target).toFixed(3)
+    };
+  });
+
+  // Анти-ачивка: показывается ТОЛЬКО когда заслужена, иначе это просто упрёк
+  // в интерфейсе на пустом месте.
+  if (t.streak_days === 0 && t.reviews_all_time > 0) {
+    list.push({
+      id: 'parking_brake', title: 'Стояночный тормоз', hint: 'Серия прервана',
+      note: 'Ты не занимался. Мы оба это знаем.',
+      unlocked: true, current: 1, target: 1, progress: 1
+    });
+    unlocked++;
+  }
+
+  return { list: list, unlocked: unlocked, total: list.length };
+}
+
+/**
+ * Диффует выданное с сохранённым и возвращает ТОЛЬКО новые — чтобы бот объявлял
+ * их один раз, а не каждое утро заново.
+ */
+function grantAchievements_(stats) {
+  var settings = readSettings_();
+  var known = String(settings.achievements || '').split(',')
+    .map(function (s) { return s.trim(); }).filter(Boolean);
+
+  var earned = evaluateAchievements(stats).list
+    .filter(function (a) { return a.unlocked; }).map(function (a) { return a.id; });
+
+  var fresh = earned.filter(function (id) { return known.indexOf(id) < 0; });
+  if (fresh.length) writeSetting_('achievements', known.concat(fresh).join(','));
+  return fresh;
+}
+
+// ==========================================================================
 // Grammar.gs
 // ==========================================================================
 
@@ -1178,7 +1579,7 @@ function buildGrammarSession(userId) {
 
   var introducedToday = 0;
   mine.forEach(function (p) {
-    if (p.first_review && String(p.first_review).slice(0, 10) === today) introducedToday++;
+    if (p.first_review && dateKey_(p.first_review, g.tz) === today) introducedToday++;
   });
   var newAllowance = Math.max(g.newTarget - introducedToday, 0);
 
@@ -1198,7 +1599,7 @@ function buildGrammarSession(userId) {
     var pool = byPattern[String(p.pattern_id)] || [];
     if (!pool.length) return;                       // a pattern with no sentences is not playable
     if (state === 'new') { fresh.push(p); return; }
-    var dueStr = p.due ? String(p.due).slice(0, 10) : '';
+    var dueStr = dateKey_(p.due, g.tz);
     if (dueStr && dueStr <= today) due.push(p); else later.push(p);
   });
 
@@ -1227,7 +1628,7 @@ function buildGrammarSession(userId) {
     },
     patterns: mine.map(function (p) {
       var pool = byPattern[String(p.pattern_id)] || [];
-      var dueStr = p.due ? String(p.due).slice(0, 10) : '';
+      var dueStr = dateKey_(p.due, g.tz);
       return {
         pattern_id: p.pattern_id,
         order_index: Number(p.order_index) || 0,
@@ -1948,6 +2349,25 @@ function tgApi_(method, payload) {
   return parsed;
 }
 
+/**
+ * Файл в чат. Именно документом, а не текстом: CSV на несколько тысяч строк не
+ * влезет в 4096 символов сообщения, а обрезанная выгрузка хуже её отсутствия.
+ * multipart собирается вручную — UrlFetchApp сам делает это для payload с Blob.
+ */
+function sendDocument_(chatId, name, content, caption) {
+  var url = 'https://api.telegram.org/bot' + cfg_('BOT_TOKEN') + '/sendDocument';
+  var blob = Utilities.newBlob(content, 'text/csv', name);
+  var res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    payload: { chat_id: String(chatId), caption: caption || '', document: blob },
+    muteHttpExceptions: true
+  });
+  var parsed;
+  try { parsed = JSON.parse(res.getContentText()); } catch (e) { parsed = { ok: false }; }
+  if (!parsed.ok) Logger.log('sendDocument failed: ' + res.getContentText());
+  return parsed;
+}
+
 function sendMessage_(chatId, text, replyMarkup) {
   return tgApi_('sendMessage', {
     chat_id: chatId,
@@ -1988,7 +2408,7 @@ function dailyPing() {
     var due = mine.filter(function (c) {
       var st = String(c.state);
       if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return false;
-      return c.due && String(c.due).slice(0, 10) <= today;
+      return c.due && dateKey_(c.due, settings.timezone) <= today;
     }).length;
     var fresh = mine.filter(function (c) { return String(c.state) === 'new'; }).length;
     var target = Math.min(parseInt(settings.daily_new_target, 10) || 6, fresh);
@@ -2002,7 +2422,7 @@ function dailyPing() {
     var gDue = myPatterns.filter(function (p) {
       var st = String(p.state || 'new');
       if (st === 'new' || st === 'suspended') return false;
-      return p.due && String(p.due).slice(0, 10) <= today;
+      return p.due && dateKey_(p.due, settings.timezone) <= today;
     }).length;
     var gFresh = myPatterns.filter(function (p) { return String(p.state || 'new') === 'new'; }).length;
     var gTarget = Math.min(parseInt(settings.grammar_daily_new_target, 10) || 1, gFresh);
@@ -2032,6 +2452,25 @@ function dailyPing() {
     if (!ok_(sendMessage_(userId, lines.join('\n'), launchKeyboard_()))) delivered = false;
   });
 
+  // Новые ачивки объявляются здесь, а не на экране: смысл ачивки в том, что она
+  // ПРИЛЕТАЕТ, а не в том, что её однажды находят в списке.
+  try {
+    allow.forEach(function (userId) {
+      var fresh = grantAchievements_(buildStats(userId));
+      if (!fresh.length) return;
+      var all = evaluateAchievements(buildStats(userId)).list;
+      var lines = ['<b>Разблокировано</b>'];
+      fresh.forEach(function (id) {
+        var a = all.filter(function (x) { return x.id === id; })[0];
+        if (a) lines.push('&#127894; <b>' + a.title + '</b>\n<i>' + a.note + '</i>');
+      });
+      sendMessage_(userId, lines.join('\n'));
+    });
+  } catch (e) {
+    // Ачивки — украшение. Уронить из-за них ежедневный пинг было бы смешно.
+    Logger.log('achievements: ' + e.message);
+  }
+
   // Отметка ставится ПОСЛЕ фактической отправки, а не в начале функции.
   // Раньше она стояла первой строкой, и упавший между отметкой и отправкой пинг
   // выглядел совершенно живым: приложение читает эту же метку, чтобы предупредить
@@ -2051,11 +2490,11 @@ function nextDueDate_(cards, patterns) {
   cards.forEach(function (c) {
     var st = String(c.state);
     if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return;
-    if (c.due) dates.push(String(c.due).slice(0, 10));
+    if (c.due) dates.push(dateKey_(c.due));
   });
   patterns.forEach(function (p) {
     if (String(p.state || 'new') === 'new' || String(p.state) === 'suspended') return;
-    if (p.due) dates.push(String(p.due).slice(0, 10));
+    if (p.due) dates.push(dateKey_(p.due));
   });
   dates.sort();
   return dates.length ? dates[0] : '';
@@ -2141,6 +2580,13 @@ function handleBotUpdate_(update) {
     }
     sendMessage_(userId, '<pre>' + escapeHtml_(clip_(String(report), 3500)) + '</pre>',
       launchKeyboard_());
+  } else if (text === '/export') {
+    var dump = exportReviewsCsv(userId);
+    if (!dump.rows) { sendMessage_(userId, 'Выгружать пока нечего — журнал пуст.'); return; }
+    var stamp = Utilities.formatDate(new Date(), readSettings_().timezone || 'Europe/Moscow',
+      'yyyy-MM-dd');
+    sendDocument_(userId, 'eng-bot-reviews-' + stamp + '.csv', dump.csv,
+      'Журнал повторений: строк ' + dump.rows);
   } else if (text === '/stats') {
     var s = buildSession(userId);
     sendMessage_(userId, [
@@ -2276,10 +2722,10 @@ function runDiagnostics() {
   var due = cards.filter(function (c) {
     var st = String(c.state);
     if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return false;
-    return c.due && String(c.due).slice(0, 10) <= today;
+    return c.due && dateKey_(c.due) <= today;
   });
   var introduced = cards.filter(function (c) {
-    return c.first_review && String(c.first_review).slice(0, 10) === today;
+    return c.first_review && dateKey_(c.first_review) === today;
   });
   var noFirst = cards.filter(function (c) { return c.last_review && !c.first_review; });
   say('  к повторению сегодня (' + today + '): ' + due.length);
@@ -2289,7 +2735,7 @@ function runDiagnostics() {
     say('  ВНИМАНИЕ: ' + noFirst.length + ' карточек показывались, но без first_review —');
     say('  дневная норма считается неверно. Выполни backfillFirstReview() один раз.');
   }
-  var futureDue = cards.map(function (c) { return c.due ? String(c.due).slice(0, 10) : ''; })
+  var futureDue = cards.map(function (c) { return dateKey_(c.due); })
     .filter(function (d) { return d && d > today; }).sort();
   say('  ближайшее будущее повторение: ' + (futureDue[0] || 'нет'));
 
@@ -2310,10 +2756,10 @@ function runDiagnostics() {
       var gDue = pats.filter(function (p) {
         var st = String(p.state || 'new');
         if (st === 'new' || st === 'suspended') return false;
-        return p.due && String(p.due).slice(0, 10) <= today;
+        return p.due && dateKey_(p.due) <= today;
       }).length;
       say('  к повторению сегодня: ' + gDue);
-      var gFuture = pats.map(function (p) { return p.due ? String(p.due).slice(0, 10) : ''; })
+      var gFuture = pats.map(function (p) { return dateKey_(p.due); })
         .filter(function (d) { return d && d > today; }).sort();
       say('  ближайшее будущее повторение: ' + (gFuture[0] || 'нет'));
     }
@@ -2449,7 +2895,7 @@ function backfillFirstReview() {
     if (!c.last_review) return;                 // ещё ни разу не показывалась
     updates.push({
       _row: c._row,
-      patch: { first_review: String(c.last_review).slice(0, 10) }
+      patch: { first_review: dateKey_(c.last_review) }
     });
   });
   var written = writeCardUpdates_(updates);
@@ -2847,7 +3293,8 @@ function doGet(e) {
     var action = e && e.parameter ? e.parameter.action : null;
     if (action === 'ping') return json_({ ok: true, pong: new Date().toISOString() });
     if (action === 'diag') return json_(diagInitData(e.parameter.initData));
-    if (action !== 'session' && action !== 'grammar' && action !== 'practice') {
+    if (action !== 'session' && action !== 'grammar' && action !== 'practice' &&
+        action !== 'stats') {
       return fail_('BAD_REQUEST', 'unknown action: ' + action);
     }
 
@@ -2856,6 +3303,11 @@ function doGet(e) {
 
     if (action === 'grammar') return json_(buildGrammarSession(auth.userId));
     if (action === 'practice') return json_(buildPractice(auth.userId));
+    if (action === 'stats') {
+      var stats = buildStats(auth.userId);
+      stats.achievements = evaluateAchievements(stats);
+      return json_(stats);
+    }
     return json_(buildSession(auth.userId));
   } catch (err) {
     Logger.log('doGet: ' + err.stack);

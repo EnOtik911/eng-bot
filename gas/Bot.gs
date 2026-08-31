@@ -15,6 +15,25 @@ function tgApi_(method, payload) {
   return parsed;
 }
 
+/**
+ * Файл в чат. Именно документом, а не текстом: CSV на несколько тысяч строк не
+ * влезет в 4096 символов сообщения, а обрезанная выгрузка хуже её отсутствия.
+ * multipart собирается вручную — UrlFetchApp сам делает это для payload с Blob.
+ */
+function sendDocument_(chatId, name, content, caption) {
+  var url = 'https://api.telegram.org/bot' + cfg_('BOT_TOKEN') + '/sendDocument';
+  var blob = Utilities.newBlob(content, 'text/csv', name);
+  var res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    payload: { chat_id: String(chatId), caption: caption || '', document: blob },
+    muteHttpExceptions: true
+  });
+  var parsed;
+  try { parsed = JSON.parse(res.getContentText()); } catch (e) { parsed = { ok: false }; }
+  if (!parsed.ok) Logger.log('sendDocument failed: ' + res.getContentText());
+  return parsed;
+}
+
 function sendMessage_(chatId, text, replyMarkup) {
   return tgApi_('sendMessage', {
     chat_id: chatId,
@@ -55,7 +74,7 @@ function dailyPing() {
     var due = mine.filter(function (c) {
       var st = String(c.state);
       if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return false;
-      return c.due && String(c.due).slice(0, 10) <= today;
+      return c.due && dateKey_(c.due, settings.timezone) <= today;
     }).length;
     var fresh = mine.filter(function (c) { return String(c.state) === 'new'; }).length;
     var target = Math.min(parseInt(settings.daily_new_target, 10) || 6, fresh);
@@ -69,7 +88,7 @@ function dailyPing() {
     var gDue = myPatterns.filter(function (p) {
       var st = String(p.state || 'new');
       if (st === 'new' || st === 'suspended') return false;
-      return p.due && String(p.due).slice(0, 10) <= today;
+      return p.due && dateKey_(p.due, settings.timezone) <= today;
     }).length;
     var gFresh = myPatterns.filter(function (p) { return String(p.state || 'new') === 'new'; }).length;
     var gTarget = Math.min(parseInt(settings.grammar_daily_new_target, 10) || 1, gFresh);
@@ -99,6 +118,25 @@ function dailyPing() {
     if (!ok_(sendMessage_(userId, lines.join('\n'), launchKeyboard_()))) delivered = false;
   });
 
+  // Новые ачивки объявляются здесь, а не на экране: смысл ачивки в том, что она
+  // ПРИЛЕТАЕТ, а не в том, что её однажды находят в списке.
+  try {
+    allow.forEach(function (userId) {
+      var fresh = grantAchievements_(buildStats(userId));
+      if (!fresh.length) return;
+      var all = evaluateAchievements(buildStats(userId)).list;
+      var lines = ['<b>Разблокировано</b>'];
+      fresh.forEach(function (id) {
+        var a = all.filter(function (x) { return x.id === id; })[0];
+        if (a) lines.push('&#127894; <b>' + a.title + '</b>\n<i>' + a.note + '</i>');
+      });
+      sendMessage_(userId, lines.join('\n'));
+    });
+  } catch (e) {
+    // Ачивки — украшение. Уронить из-за них ежедневный пинг было бы смешно.
+    Logger.log('achievements: ' + e.message);
+  }
+
   // Отметка ставится ПОСЛЕ фактической отправки, а не в начале функции.
   // Раньше она стояла первой строкой, и упавший между отметкой и отправкой пинг
   // выглядел совершенно живым: приложение читает эту же метку, чтобы предупредить
@@ -118,11 +156,11 @@ function nextDueDate_(cards, patterns) {
   cards.forEach(function (c) {
     var st = String(c.state);
     if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return;
-    if (c.due) dates.push(String(c.due).slice(0, 10));
+    if (c.due) dates.push(dateKey_(c.due));
   });
   patterns.forEach(function (p) {
     if (String(p.state || 'new') === 'new' || String(p.state) === 'suspended') return;
-    if (p.due) dates.push(String(p.due).slice(0, 10));
+    if (p.due) dates.push(dateKey_(p.due));
   });
   dates.sort();
   return dates.length ? dates[0] : '';
@@ -208,6 +246,13 @@ function handleBotUpdate_(update) {
     }
     sendMessage_(userId, '<pre>' + escapeHtml_(clip_(String(report), 3500)) + '</pre>',
       launchKeyboard_());
+  } else if (text === '/export') {
+    var dump = exportReviewsCsv(userId);
+    if (!dump.rows) { sendMessage_(userId, 'Выгружать пока нечего — журнал пуст.'); return; }
+    var stamp = Utilities.formatDate(new Date(), readSettings_().timezone || 'Europe/Moscow',
+      'yyyy-MM-dd');
+    sendDocument_(userId, 'eng-bot-reviews-' + stamp + '.csv', dump.csv,
+      'Журнал повторений: строк ' + dump.rows);
   } else if (text === '/stats') {
     var s = buildSession(userId);
     sendMessage_(userId, [

@@ -3,14 +3,39 @@
  * One GET per session, one POST per session — see docs/deploy.md for why.
  */
 
+/**
+ * Дата из таблицы в вид 'YYYY-MM-DD'.
+ *
+ * getValues() возвращает СЫРЫЕ значения ячеек, а Google Sheets молча превращает
+ * записанную строку '2026-08-28' в дату. Обратно она приходит объектом Date, и
+ * String(date).slice(0, 10) даёт 'Sun Aug 28' — строку, которая не равна ни одной
+ * дате и при этом БОЛЬШЕ любой '2026-..' при лексикографическом сравнении.
+ *
+ * Поэтому условие `due <= today` было вечно ложным: карточка, у которой наступил
+ * срок, не возвращалась НИКОГДА. По той же причине дневная норма считала, что
+ * сегодня не введено ничего, и выдавала полную порцию новых на каждый запуск, а
+ * daysBetween_ отдавал NaN — прямо в планировщик, вместе со стабильностью.
+ *
+ * Юнит-тесты этого не видели четыре месяца, потому что подставляли даты СТРОКАМИ —
+ * форму, которой в живой таблице нет.
+ */
+function dateKey_(v, tz) {
+  if (v === null || v === undefined || v === '') return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    if (isNaN(v.getTime())) return '';
+    return Utilities.formatDate(v, tz || 'Europe/Moscow', 'yyyy-MM-dd');
+  }
+  return String(v).slice(0, 10);
+}
+
 function todayStr_(tz) {
   return Utilities.formatDate(new Date(), tz || 'Europe/Moscow', 'yyyy-MM-dd');
 }
 
-function daysBetween_(fromStr, toStr) {
-  if (!fromStr) return 0;
-  var a = new Date(String(fromStr).slice(0, 10) + 'T00:00:00Z').getTime();
-  var b = new Date(String(toStr).slice(0, 10) + 'T00:00:00Z').getTime();
+function daysBetween_(from, to) {
+  var a = Date.parse(dateKey_(from) + 'T00:00:00Z');
+  var b = Date.parse(dateKey_(to) + 'T00:00:00Z');
+  if (isNaN(a) || isNaN(b)) return 0;
   return Math.max(Math.round((b - a) / 86400000), 0);
 }
 
@@ -34,7 +59,7 @@ function buildSession(userId) {
   mine.forEach(function (c) {
     // Сколько новых уже введено сегодня. Считается по строке карточки, а не по
     // журналу: планировщик журнал не читает, это условие из ADR-02.
-    if (c.first_review && String(c.first_review).slice(0, 10) === today) introducedToday++;
+    if (c.first_review && dateKey_(c.first_review, tz) === today) introducedToday++;
   });
 
   mine.forEach(function (c) {
@@ -43,7 +68,7 @@ function buildSession(userId) {
     if (state === 'suspended') return;
     if (state === 'locked') { locked++; return; }
     if (state === 'new') { fresh.push(c); return; }
-    var dueStr = c.due ? String(c.due).slice(0, 10) : '';
+    var dueStr = dateKey_(c.due, tz);
     if (dueStr && dueStr <= today) due.push(c);
   });
 

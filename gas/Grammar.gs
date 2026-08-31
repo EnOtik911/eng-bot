@@ -96,7 +96,7 @@ function buildGrammarSession(userId) {
 
   var introducedToday = 0;
   mine.forEach(function (p) {
-    if (p.first_review && String(p.first_review).slice(0, 10) === today) introducedToday++;
+    if (p.first_review && dateKey_(p.first_review, g.tz) === today) introducedToday++;
   });
   var newAllowance = Math.max(g.newTarget - introducedToday, 0);
 
@@ -116,7 +116,7 @@ function buildGrammarSession(userId) {
     var pool = byPattern[String(p.pattern_id)] || [];
     if (!pool.length) return;                       // a pattern with no sentences is not playable
     if (state === 'new') { fresh.push(p); return; }
-    var dueStr = p.due ? String(p.due).slice(0, 10) : '';
+    var dueStr = dateKey_(p.due, g.tz);
     if (dueStr && dueStr <= today) due.push(p); else later.push(p);
   });
 
@@ -145,7 +145,7 @@ function buildGrammarSession(userId) {
     },
     patterns: mine.map(function (p) {
       var pool = byPattern[String(p.pattern_id)] || [];
-      var dueStr = p.due ? String(p.due).slice(0, 10) : '';
+      var dueStr = dateKey_(p.due, g.tz);
       return {
         pattern_id: p.pattern_id,
         order_index: Number(p.order_index) || 0,

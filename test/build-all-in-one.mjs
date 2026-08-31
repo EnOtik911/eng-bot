@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const order = ['Config.gs', 'Fsrs.gs', 'Store.gs', 'Auth.gs', 'Session.gs',
+const order = ['Config.gs', 'Fsrs.gs', 'Store.gs', 'Auth.gs', 'Session.gs', 'Stats.gs', 'Achievements.gs',
   'Grammar.gs', 'Import.gs', 'GrammarImport.gs', 'GrammarSeed.gs',
   'Bot.gs', 'Triggers.gs', 'Diagnose.gs', 'Setup.gs', 'BankLoad.gs', 'Menu.gs', 'Main.gs'];
 

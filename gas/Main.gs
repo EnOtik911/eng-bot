@@ -21,7 +21,8 @@ function doGet(e) {
     var action = e && e.parameter ? e.parameter.action : null;
     if (action === 'ping') return json_({ ok: true, pong: new Date().toISOString() });
     if (action === 'diag') return json_(diagInitData(e.parameter.initData));
-    if (action !== 'session' && action !== 'grammar' && action !== 'practice') {
+    if (action !== 'session' && action !== 'grammar' && action !== 'practice' &&
+        action !== 'stats') {
       return fail_('BAD_REQUEST', 'unknown action: ' + action);
     }
 
@@ -30,6 +31,11 @@ function doGet(e) {
 
     if (action === 'grammar') return json_(buildGrammarSession(auth.userId));
     if (action === 'practice') return json_(buildPractice(auth.userId));
+    if (action === 'stats') {
+      var stats = buildStats(auth.userId);
+      stats.achievements = evaluateAchievements(stats);
+      return json_(stats);
+    }
     return json_(buildSession(auth.userId));
   } catch (err) {
     Logger.log('doGet: ' + err.stack);

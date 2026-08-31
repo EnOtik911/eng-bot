@@ -76,10 +76,10 @@ function runDiagnostics() {
   var due = cards.filter(function (c) {
     var st = String(c.state);
     if (st === 'leech' || st === 'suspended' || st === 'locked' || st === 'new') return false;
-    return c.due && String(c.due).slice(0, 10) <= today;
+    return c.due && dateKey_(c.due) <= today;
   });
   var introduced = cards.filter(function (c) {
-    return c.first_review && String(c.first_review).slice(0, 10) === today;
+    return c.first_review && dateKey_(c.first_review) === today;
   });
   var noFirst = cards.filter(function (c) { return c.last_review && !c.first_review; });
   say('  к повторению сегодня (' + today + '): ' + due.length);
@@ -89,7 +89,7 @@ function runDiagnostics() {
     say('  ВНИМАНИЕ: ' + noFirst.length + ' карточек показывались, но без first_review —');
     say('  дневная норма считается неверно. Выполни backfillFirstReview() один раз.');
   }
-  var futureDue = cards.map(function (c) { return c.due ? String(c.due).slice(0, 10) : ''; })
+  var futureDue = cards.map(function (c) { return dateKey_(c.due); })
     .filter(function (d) { return d && d > today; }).sort();
   say('  ближайшее будущее повторение: ' + (futureDue[0] || 'нет'));
 
@@ -110,10 +110,10 @@ function runDiagnostics() {
       var gDue = pats.filter(function (p) {
         var st = String(p.state || 'new');
         if (st === 'new' || st === 'suspended') return false;
-        return p.due && String(p.due).slice(0, 10) <= today;
+        return p.due && dateKey_(p.due) <= today;
       }).length;
       say('  к повторению сегодня: ' + gDue);
-      var gFuture = pats.map(function (p) { return p.due ? String(p.due).slice(0, 10) : ''; })
+      var gFuture = pats.map(function (p) { return dateKey_(p.due); })
         .filter(function (d) { return d && d > today; }).sort();
       say('  ближайшее будущее повторение: ' + (gFuture[0] || 'нет'));
     }
