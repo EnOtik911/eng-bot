@@ -162,6 +162,16 @@ function updateSeen_(updateId) {
   return false;
 }
 
+/** Отчёт уходит в <pre>, поэтому угловые скобки из сообщений об ошибках надо обезвредить. */
+function escapeHtml_(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** У Telegram потолок 4096 символов на сообщение, а отчёт растёт вместе с числом батчей. */
+function clip_(s, max) {
+  return s.length <= max ? s : s.slice(0, max) + '\n… отчёт обрезан';
+}
+
 function handleBotUpdate_(update) {
   if (updateSeen_(update.update_id)) return;   // повторная доставка того же апдейта
   var msg = update.message;
@@ -172,6 +182,21 @@ function handleBotUpdate_(update) {
   var text = String(msg.text).trim();
   if (text === '/start' || text === '/open') {
     sendMessage_(userId, 'Тренажёр готов.', launchKeyboard_());
+  } else if (text === '/load') {
+    // Единственный пульт для заливки банка. Пункт меню в таблице требует рук в таблице,
+    // а `clasp run` требует GCP-проекта, которого у этого проекта намеренно нет.
+    // Дедуп по update_id стоит ВЫШЕ по функции, поэтому повтор доставки не зальёт дважды.
+    sendMessage_(userId, 'Заливаю банк из репозитория. Это занимает минуту-две.');
+    var report;
+    try {
+      report = loadEverything();
+    } catch (e) {
+      // Молча в Logger такая ошибка ушла бы навсегда: логи Apps Script никто не открывает.
+      sendMessage_(userId, '<b>Заливка упала</b>\n<pre>' + escapeHtml_(String(e.message)) + '</pre>');
+      return;
+    }
+    sendMessage_(userId, '<pre>' + escapeHtml_(clip_(String(report), 3500)) + '</pre>',
+      launchKeyboard_());
   } else if (text === '/stats') {
     var s = buildSession(userId);
     sendMessage_(userId, [

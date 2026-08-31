@@ -537,7 +537,7 @@ curl "https://api.telegram.org/bot$TOKEN/getWebhookInfo"
 Проверить, что бэкенд обновился, можно одной командой. Сначала задай адрес — он лежит
 в `app/config.js`, доставать руками не нужно:
 
-```bash
+  
 cd ~/Documents/Life/Eng_bot
 export EXEC_URL="$(grep -o "https://script.google.com[^']*" app/config.js)"
 echo "$EXEC_URL"
