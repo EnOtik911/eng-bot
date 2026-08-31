@@ -743,16 +743,21 @@ a.tag-accent { text-decoration: none; }
 .decor-plane {
   width: 100%;
   stroke: var(--accent);
-  stroke-width: 3;
+  /* Толщина в единицах viewBox (872 в ширину). 2.4 даёт примерно тот же вес линии,
+     что и в исходном чертеже, где при ширине 1000 стояло 2. */
+  stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: .3;
+  opacity: .26;
 }
 
+/* Было 78vmax при opacity .2: кольца перекрывали пол-экрана и при этом почти не
+   читались — большая бледная дуга воспринимается как градиент, а не как знак.
+   Меньше и контрастнее: узнаётся как логотип, а не как фон. */
 .drift-rings {
-  width: 78vmax;
-  left: -12vmax;
-  bottom: 3vmax;
+  width: 38vmax;
+  left: 4vmax;
+  bottom: 5vmax;
   animation: roll 44s var(--ease) infinite alternate;
 }
 
@@ -763,14 +768,19 @@ a.tag-accent { text-decoration: none; }
   width: 100%;
   stroke: var(--accent);
   stroke-width: 27;
-  opacity: .2;
+  opacity: .3;
 }
 
+/* Знак поворота здесь несёт физику, а не вкус.
+   Нос смотрит ВПРАВО, а положительный rotate() крутит по часовой — то есть прежние
+   +20deg на наборе высоты опускали нос вниз, и самолёт лез вверх пикируя. Тангаж
+   отрицательный на всём цикле: машина и взлетает, и заходит на посадку с поднятым
+   носом, круче всего в наборе. */
 @keyframes takeoff {
-  0%   { transform: translate3d(0, 12vmax, 0) rotate(6deg); opacity: 1; }
-  45%  { transform: translate3d(10vmax, -22vmax, 0) rotate(20deg); opacity: .35; }
-  55%  { transform: translate3d(11vmax, -26vmax, 0) rotate(22deg); opacity: .2; }
-  100% { transform: translate3d(-6vmax, 20vmax, 0) rotate(-2deg); opacity: 1; }
+  0%   { transform: translate3d(0, 13vmax, 0) rotate(-3deg); opacity: 1; }
+  45%  { transform: translate3d(10vmax, -20vmax, 0) rotate(-13deg); opacity: .4; }
+  55%  { transform: translate3d(11vmax, -24vmax, 0) rotate(-14deg); opacity: .24; }
+  100% { transform: translate3d(-6vmax, 18vmax, 0) rotate(-4deg); opacity: 1; }
 }
 
 @keyframes roll {
