@@ -1,50 +1,50 @@
-type	en	ru	example_en	example_ru	layer	topic	note
-collocation	set up a call	назначить созвон	Let us set up a call for Tuesday.	Давайте назначим созвон на вторник.	business	meetings	
-collocation	push a meeting back	перенести встречу на позже	Can we push the meeting back an hour?	Можем перенести встречу на час позже?	business	meetings	
-collocation	bring forward	перенести на более ранний срок	They want to bring the deadline forward.	Они хотят перенести срок раньше.	business	meetings	
-collocation	run through the agenda	пройтись по повестке	Let us run through the agenda quickly.	Давайте быстро пройдёмся по повестке.	business	meetings	
-collocation	take the minutes	вести протокол	I will take the minutes today.	Я сегодня буду вести протокол.	business	meetings	
-collocation	circle back to	вернуться к вопросу	Let us circle back to pricing later.	Вернёмся к ценообразованию позже.	business	meetings	
-collocation	park an issue	отложить вопрос	Let us park that issue for now.	Давайте пока отложим этот вопрос.	business	meetings	
-collocation	loop someone in	подключить кого-то к переписке	Please loop the legal team in.	Пожалуйста, подключи юристов.	business	email	
-collocation	follow up on	напомнить, проследить	I am following up on my previous email.	Напоминаю о своём предыдущем письме.	business	email	
-collocation	reach out to	связаться с	I will reach out to the vendor today.	Я свяжусь с поставщиком сегодня.	business	email	
-collocation	touch base with	связаться накоротке	Let me touch base with the team first.	Дай я сначала свяжусь с командой.	business	email	
-collocation	keep someone posted	держать в курсе	I will keep you posted on the progress.	Буду держать тебя в курсе прогресса.	business	email	
-collocation	flag a risk	обозначить риск	I want to flag a risk about the timeline.	Хочу обозначить риск по срокам.	business	risk	
-collocation	escalate an issue	эскалировать вопрос	We had to escalate the issue to the director.	Пришлось эскалировать вопрос директору.	business	risk	
-collocation	mitigate a risk	снизить риск	We mitigate the risk with a staged rollout.	Мы снижаем риск поэтапной выкаткой.	business	risk	
-collocation	a blocker	блокер	This dependency is a blocker for release.	Эта зависимость блокер для релиза.	business	risk	
-collocation	meet a deadline	уложиться в срок	We will not meet the deadline this way.	Так мы не уложимся в срок.	business	planning	
-collocation	scope creep	расползание объёма работ	Scope creep killed our original estimate.	Расползание объёма убило нашу первоначальную оценку.	business	planning	
-collocation	break something down	разбить на части	Break the task down into smaller pieces.	Разбей задачу на части поменьше.	business	planning	
-collocation	allocate resources	выделить ресурсы	We need to allocate resources for testing.	Нужно выделить ресурсы на тестирование.	business	planning	
-collocation	a rough estimate	грубая оценка	Give me a rough estimate by Friday.	Дай грубую оценку к пятнице.	business	planning	
-collocation	a hard deadline	жёсткий срок	The audit is a hard deadline, not a target.	Аудит это жёсткий срок, а не ориентир.	business	planning	
-collocation	be accountable for	отвечать за результат	I am accountable for the delivery date.	Я отвечаю за дату поставки.	business	ownership	
-collocation	hand something over	передать дела	He handed the project over before leaving.	Он передал проект перед уходом.	business	ownership	
-collocation	sign something off	утвердить, подписать	The sponsor signed the budget off.	Спонсор утвердил бюджет.	business	ownership	
-collocation	get buy-in from	получить поддержку от	We need buy-in from the finance team.	Нам нужна поддержка финансовой команды.	business	ownership	
-phrase	to give you some context	чтобы дать контекст	To give you some context, we started in May.	Чтобы дать контекст: мы начали в мае.	business	presenting	
-phrase	the short answer is	короткий ответ	The short answer is yes, with conditions.	Короткий ответ: да, с условиями.	business	presenting	
-collocation	at a high level	на верхнем уровне	At a high level the design is simple.	На верхнем уровне решение простое.	business	presenting	
-collocation	drill down into	углубиться в	Let us drill down into the numbers.	Давайте углубимся в цифры.	business	presenting	
-collocation	a trade-off between	компромисс между	There is a trade-off between speed and cost.	Есть компромисс между скоростью и стоимостью.	business	decision	
-collocation	weigh up the options	взвесить варианты	We weighed up the options for a week.	Мы неделю взвешивали варианты.	business	decision	
-collocation	make a call on	принять решение по	Someone has to make a call on this.	Кто-то должен принять решение по этому.	business	decision	
-collocation	a decision maker	лицо, принимающее решение	Who is the decision maker on this contract?	Кто принимает решение по этому контракту?	business	decision	
-collocation	get the green light	получить добро	We got the green light from compliance.	Мы получили добро от комплаенса.	business	decision	
-collocation	put on hold	поставить на паузу	We put the project on hold until Q3.	Мы поставили проект на паузу до третьего квартала.	business	decision	
-collocation	onboard a new hire	ввести нового сотрудника	We onboard new hires every second Monday.	Мы вводим новых сотрудников каждый второй понедельник.	business	people	
-collocation	a direct report	прямой подчинённый	She has four direct reports now.	У неё сейчас четыре прямых подчинённых.	business	people	
-collocation	a stakeholder	заинтересованная сторона	Every stakeholder must review the draft.	Каждая заинтересованная сторона должна посмотреть черновик.	business	people	
-collocation	cross-functional team	кросс-функциональная команда	This is a cross-functional team of six.	Это кросс-функциональная команда из шести человек.	business	people	
-collocation	a subject matter expert	эксперт предметной области	Ask the subject matter expert about tax.	Спроси эксперта предметной области про налоги.	business	people	
-collocation	give feedback on	дать обратную связь по	Please give feedback on the draft today.	Пожалуйста, дай обратную связь по черновику сегодня.	business	people	
-collocation	a performance review	оценка результатов	My performance review is next Thursday.	Моя оценка результатов в следующий четверг.	business	people	
-collocation	meet expectations	соответствовать ожиданиям	The vendor did not meet our expectations.	Поставщик не соответствовал нашим ожиданиям.	business	people	
-collocation	cut costs	сокращать расходы	They cut costs across every department.	Они сократили расходы во всех отделах.	business	finance	
-collocation	stay within budget	уложиться в бюджет	We stayed within budget this quarter.	Мы уложились в бюджет в этом квартале.	business	finance	
-collocation	a cost driver	драйвер затрат	Support is the biggest cost driver here.	Поддержка тут самый большой драйвер затрат.	business	finance	
-collocation	break even	выйти в ноль	The product breaks even after eight months.	Продукт выходит в ноль через восемь месяцев.	business	finance	
-collocation	a recurring revenue	повторяющаяся выручка	Subscriptions give us recurring revenue.	Подписки дают нам повторяющуюся выручку.	business	finance	
+type	en	ru	example_en	example_ru	layer	topic	note	breakdown
+collocation	set up a call	назначить созвон	Let us set up a call for Tuesday.	Давайте назначим созвон на вторник.	business	meetings		
+collocation	push a meeting back	перенести встречу на позже	Can we push the meeting back an hour?	Можем перенести встречу на час позже?	business	meetings		
+collocation	bring forward	перенести на более ранний срок	They want to bring the deadline forward.	Они хотят перенести срок раньше.	business	meetings		
+collocation	run through the agenda	пройтись по повестке	Let us run through the agenda quickly.	Давайте быстро пройдёмся по повестке.	business	meetings		
+collocation	take the minutes	вести протокол	I will take the minutes today.	Я сегодня буду вести протокол.	business	meetings		
+collocation	circle back to	вернуться к вопросу	Let us circle back to pricing later.	Вернёмся к ценообразованию позже.	business	meetings		
+collocation	park an issue	отложить вопрос	Let us park that issue for now.	Давайте пока отложим этот вопрос.	business	meetings		
+collocation	loop someone in	подключить кого-то к переписке	Please loop the legal team in.	Пожалуйста, подключи юристов.	business	email		
+collocation	follow up on	напомнить, проследить	I am following up on my previous email.	Напоминаю о своём предыдущем письме.	business	email		
+collocation	reach out to	связаться с	I will reach out to the vendor today.	Я свяжусь с поставщиком сегодня.	business	email		
+collocation	touch base with	связаться накоротке	Let me touch base with the team first.	Дай я сначала свяжусь с командой.	business	email		
+collocation	keep someone posted	держать в курсе	I will keep you posted on the progress.	Буду держать тебя в курсе прогресса.	business	email		
+collocation	flag a risk	обозначить риск	I want to flag a risk about the timeline.	Хочу обозначить риск по срокам.	business	risk		
+collocation	escalate an issue	эскалировать вопрос	We had to escalate the issue to the director.	Пришлось эскалировать вопрос директору.	business	risk		
+collocation	mitigate a risk	снизить риск	We mitigate the risk with a staged rollout.	Мы снижаем риск поэтапной выкаткой.	business	risk		
+collocation	a blocker	блокер	This dependency is a blocker for release.	Эта зависимость блокер для релиза.	business	risk		
+collocation	meet a deadline	уложиться в срок	We will not meet the deadline this way.	Так мы не уложимся в срок.	business	planning		
+collocation	scope creep	расползание объёма работ	Scope creep killed our original estimate.	Расползание объёма убило нашу первоначальную оценку.	business	planning		
+collocation	break something down	разбить на части	Break the task down into smaller pieces.	Разбей задачу на части поменьше.	business	planning		
+collocation	allocate resources	выделить ресурсы	We need to allocate resources for testing.	Нужно выделить ресурсы на тестирование.	business	planning		
+collocation	a rough estimate	грубая оценка	Give me a rough estimate by Friday.	Дай грубую оценку к пятнице.	business	planning		
+collocation	a hard deadline	жёсткий срок	The audit is a hard deadline, not a target.	Аудит это жёсткий срок, а не ориентир.	business	planning		
+collocation	be accountable for	отвечать за результат	I am accountable for the delivery date.	Я отвечаю за дату поставки.	business	ownership		
+collocation	hand something over	передать дела	He handed the project over before leaving.	Он передал проект перед уходом.	business	ownership		
+collocation	sign something off	утвердить, подписать	The sponsor signed the budget off.	Спонсор утвердил бюджет.	business	ownership		
+collocation	get buy-in from	получить поддержку от	We need buy-in from the finance team.	Нам нужна поддержка финансовой команды.	business	ownership		
+phrase	to give you some context	чтобы дать контекст	To give you some context, we started in May.	Чтобы дать контекст: мы начали в мае.	business	presenting		
+phrase	the short answer is	короткий ответ	The short answer is yes, with conditions.	Короткий ответ: да, с условиями.	business	presenting		
+collocation	at a high level	на верхнем уровне	At a high level the design is simple.	На верхнем уровне решение простое.	business	presenting		
+collocation	drill down into	углубиться в	Let us drill down into the numbers.	Давайте углубимся в цифры.	business	presenting		
+collocation	a trade-off between	компромисс между	There is a trade-off between speed and cost.	Есть компромисс между скоростью и стоимостью.	business	decision		
+collocation	weigh up the options	взвесить варианты	We weighed up the options for a week.	Мы неделю взвешивали варианты.	business	decision		
+collocation	make a call on	принять решение по	Someone has to make a call on this.	Кто-то должен принять решение по этому.	business	decision		
+collocation	a decision maker	лицо, принимающее решение	Who is the decision maker on this contract?	Кто принимает решение по этому контракту?	business	decision		
+collocation	get the green light	получить добро	We got the green light from compliance.	Мы получили добро от комплаенса.	business	decision		
+collocation	put on hold	поставить на паузу	We put the project on hold until Q3.	Мы поставили проект на паузу до третьего квартала.	business	decision		
+collocation	onboard a new hire	ввести нового сотрудника	We onboard new hires every second Monday.	Мы вводим новых сотрудников каждый второй понедельник.	business	people		
+collocation	a direct report	прямой подчинённый	She has four direct reports now.	У неё сейчас четыре прямых подчинённых.	business	people		
+collocation	a stakeholder	заинтересованная сторона	Every stakeholder must review the draft.	Каждая заинтересованная сторона должна посмотреть черновик.	business	people		
+collocation	cross-functional team	кросс-функциональная команда	This is a cross-functional team of six.	Это кросс-функциональная команда из шести человек.	business	people		
+collocation	a subject matter expert	эксперт предметной области	Ask the subject matter expert about tax.	Спроси эксперта предметной области про налоги.	business	people		
+collocation	give feedback on	дать обратную связь по	Please give feedback on the draft today.	Пожалуйста, дай обратную связь по черновику сегодня.	business	people		
+collocation	a performance review	оценка результатов	My performance review is next Thursday.	Моя оценка результатов в следующий четверг.	business	people		
+collocation	meet expectations	соответствовать ожиданиям	The vendor did not meet our expectations.	Поставщик не соответствовал нашим ожиданиям.	business	people		
+collocation	cut costs	сокращать расходы	They cut costs across every department.	Они сократили расходы во всех отделах.	business	finance		
+collocation	stay within budget	уложиться в бюджет	We stayed within budget this quarter.	Мы уложились в бюджет в этом квартале.	business	finance		
+collocation	a cost driver	драйвер затрат	Support is the biggest cost driver here.	Поддержка тут самый большой драйвер затрат.	business	finance		
+collocation	break even	выйти в ноль	The product breaks even after eight months.	Продукт выходит в ноль через восемь месяцев.	business	finance		
+collocation	a recurring revenue	повторяющаяся выручка	Subscriptions give us recurring revenue.	Подписки дают нам повторяющуюся выручку.	business	finance		

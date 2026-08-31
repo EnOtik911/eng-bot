@@ -129,6 +129,8 @@
     el('typebox').value = '';
     el('typehint').hidden = !isProd;
 
+    renderGloss(card);
+
     el('answer-block').hidden = true;
     el('reveal').hidden = false;
     el('ratings').hidden = true;
@@ -137,6 +139,27 @@
     renderProgress();
     saveProgress();
     show('screen-card');
+  }
+
+  /**
+   * Пословный разбор и объяснение «почему так говорится».
+   *
+   * Открыт только у новых карточек. На повторении он свёрнут: смысл повторения в
+   * извлечении из памяти, а готовый разбор перед глазами это извлечение подменяет.
+   * Ровно поэтому же он живёт внутри answer-block и появляется после «Показать».
+   */
+  function renderGloss(card) {
+    var box = el('gloss');
+    var words = String(card.breakdown || '').trim();
+    var why = String(card.note || '').trim();
+    if (!words && !why) { box.hidden = true; return; }
+
+    box.hidden = false;
+    el('gloss-words').textContent = words;
+    el('gloss-words').hidden = !words;
+    el('gloss-note').textContent = why;
+    el('gloss-note').hidden = !why;
+    box.open = String(card.state) === 'new';
   }
 
   function reveal() {

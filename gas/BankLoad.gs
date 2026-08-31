@@ -56,6 +56,9 @@ function loadBankFile(fileName) {
   var sh = sheet_(SHEET_INBOX);
 
   // Inbox должен быть пуст: чужие недоимпортированные строки уехали бы в этот батч.
+  // Заголовок переписывается каждый раз: схема выросла на колонку, и лист,
+  // созданный до этого, молча разъехался бы со значениями.
+  sh.getRange(1, 1, 1, IMPORT_COLUMNS.length).setValues([IMPORT_COLUMNS]).setFontWeight('bold');
   var lastRow = sh.getLastRow();
   if (lastRow >= 2) sh.getRange(2, 1, lastRow - 1, IMPORT_COLUMNS.length).clearContent();
 
@@ -65,6 +68,48 @@ function loadBankFile(fileName) {
   var report = importInbox(cfgAllowlist_()[0]);
   report.file = fileName;
   report.rows_in_file = rows.length;
+  return report;
+}
+
+/**
+ * Дописать разбор и объяснение в УЖЕ импортированные карточки.
+ *
+ * Обычный импорт для этого не годится: он отклоняет дубликаты, а все эти единицы
+ * в таблице уже есть. Сопоставление идёт по `en` — в банке это ключ уникальности,
+ * по нему же импортёр ловит дубликаты. Обновляются обе карточки единицы (recog и
+ * prod): разбор принадлежит словосочетанию, а не направлению.
+ */
+function backfillGloss() {
+  var text = {};
+  var files = ['seed-batch-001.tsv'].concat(BANK_FILES);
+  var scanned = 0;
+  files.forEach(function (f) {
+    var rows;
+    try { rows = fetchTsv_(f); } catch (e) { Logger.log(f + ': ' + e.message); return; }
+    rows.forEach(function (cells) {
+      var en = String(cells[1] || '').trim();
+      var note = String(cells[7] || '').trim();
+      var breakdown = String(cells[8] || '').trim();
+      scanned++;
+      if (en && (note || breakdown)) text[en] = { note: note, breakdown: breakdown };
+    });
+  });
+
+  var updates = [];
+  readCards_().forEach(function (c) {
+    var t = text[String(c.en).trim()];
+    if (!t) return;
+    // Пустым значением ничего не затираем: файл мог отстать от таблицы.
+    var patch = {};
+    if (t.note && String(c.note || '') !== t.note) patch.note = t.note;
+    if (t.breakdown && String(c.breakdown || '') !== t.breakdown) patch.breakdown = t.breakdown;
+    if (Object.keys(patch).length) updates.push({ _row: c._row, patch: patch });
+  });
+
+  var written = writeCardUpdates_(updates);
+  var report = 'разбор: в файлах ' + Object.keys(text).length + ' единиц из ' + scanned +
+    ', обновлено карточек ' + written;
+  Logger.log(report);
   return report;
 }
 

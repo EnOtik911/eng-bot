@@ -1068,3 +1068,37 @@ a.tag-accent { text-decoration: none; }
 .btn-pause { margin-top: var(--s1); }
 
 #done-next { white-space: pre-line; }
+
+/* ---------- разбор словосочетания ---------- */
+
+.gloss { margin-top: var(--s2); }
+.gloss > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  padding: 4px 0;
+}
+.gloss > summary::-webkit-details-marker { display: none; }
+.gloss > summary::after { content: ' ▾'; }
+.gloss[open] > summary::after { content: ' ▴'; }
+
+.gloss-words {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+/* «Почему так говорится» отделено от пословного перевода: это разные вопросы,
+   и слитым текстом второй теряется в первом. */
+.gloss-note {
+  margin: var(--s1) 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--fg-dim);
+}

@@ -114,7 +114,7 @@ function importInbox(userId) {
       var values = {
         card_id: makeId_('c'), item_id: itemId, direction: dir, type: r.type,
         en: r.en, ru: r.ru, example_en: r.example_en, example_ru: r.example_ru,
-        layer: r.layer, topic: r.topic, note: r.note,
+        layer: r.layer, topic: r.topic, note: r.note, breakdown: r.breakdown,
         state: dir === 'recog' ? 'new' : 'locked',
         due: '', stability: '', difficulty: '', reps: 0, lapses: 0,
         last_review: '', created_at: now, user_id: userId, source_batch: batch,

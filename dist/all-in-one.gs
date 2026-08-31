@@ -35,7 +35,10 @@ var CARD_COLUMNS = [
   'lapses', 'last_review', 'created_at', 'user_id', 'source_batch',
   // Добавлена после первой живой сессии. Только в конце: вставка в середину сдвинула
   // бы значения во всех существующих строках.
-  'first_review'
+  'first_review',
+  // Пословный разбор словосочетания. Тоже в самый конец — по той же причине, что и
+  // first_review: вставка в середину сдвинула бы значения во всех живых строках.
+  'breakdown'
 ];
 
 /**
@@ -65,7 +68,13 @@ var GRAMMAR_LOG_COLUMNS = ['pattern_id', 'ts', 'rating', 'errors', 'hints', 'ite
 
 var VALID_KINDS = ['scramble', 'gapfill', 'transform', 'fix'];
 
-var IMPORT_COLUMNS = ['type', 'en', 'ru', 'example_en', 'example_ru', 'layer', 'topic', 'note'];
+/**
+ * `note` отвечает на вопрос «почему говорится именно так», `breakdown` — «что здесь
+ * какое слово». Разные вопросы, поэтому разные колонки: смешав их, нельзя показать
+ * одно без другого, а на повторении нужен как раз разбор без объяснения.
+ */
+var IMPORT_COLUMNS = ['type', 'en', 'ru', 'example_en', 'example_ru', 'layer', 'topic',
+  'note', 'breakdown'];
 var LOG_COLUMNS = ['card_id', 'ts', 'rating', 'elapsed_days', 'interval_days',
   'stability', 'difficulty', 'batch_id'];
 
@@ -963,7 +972,11 @@ function cardPayload_(c) {
     example_en: c.example_en,
     example_ru: c.example_ru,
     layer: c.layer,
-    state: c.state
+    state: c.state,
+    // Разбор едет вместе с карточкой, а не отдельным запросом: очередь и так уже
+    // забирается целиком, а лишний round trip к Apps Script стоит 400-1500 мс.
+    note: c.note || '',
+    breakdown: c.breakdown || ''
   };
 }
 
@@ -1908,7 +1921,7 @@ function importInbox(userId) {
       var values = {
         card_id: makeId_('c'), item_id: itemId, direction: dir, type: r.type,
         en: r.en, ru: r.ru, example_en: r.example_en, example_ru: r.example_ru,
-        layer: r.layer, topic: r.topic, note: r.note,
+        layer: r.layer, topic: r.topic, note: r.note, breakdown: r.breakdown,
         state: dir === 'recog' ? 'new' : 'locked',
         due: '', stability: '', difficulty: '', reps: 0, lapses: 0,
         last_review: '', created_at: now, user_id: userId, source_batch: batch,
@@ -2597,6 +2610,13 @@ function handleBotUpdate_(update) {
     }
     sendMessage_(userId, '<pre>' + escapeHtml_(clip_(String(report), 3500)) + '</pre>',
       launchKeyboard_());
+  } else if (text === '/gloss') {
+    try {
+      sendMessage_(userId, escapeHtml_(backfillGloss()));
+    } catch (e) {
+      sendMessage_(userId, '<b>Заливка разбора упала</b>\n<pre>' +
+        escapeHtml_(String(e.message)) + '</pre>');
+    }
   } else if (text === '/export') {
     var dump = exportReviewsCsv(userId);
     if (!dump.rows) { sendMessage_(userId, 'Выгружать пока нечего — журнал пуст.'); return; }
@@ -2984,6 +3004,9 @@ function loadBankFile(fileName) {
   var sh = sheet_(SHEET_INBOX);
 
   // Inbox должен быть пуст: чужие недоимпортированные строки уехали бы в этот батч.
+  // Заголовок переписывается каждый раз: схема выросла на колонку, и лист,
+  // созданный до этого, молча разъехался бы со значениями.
+  sh.getRange(1, 1, 1, IMPORT_COLUMNS.length).setValues([IMPORT_COLUMNS]).setFontWeight('bold');
   var lastRow = sh.getLastRow();
   if (lastRow >= 2) sh.getRange(2, 1, lastRow - 1, IMPORT_COLUMNS.length).clearContent();
 
@@ -2993,6 +3016,48 @@ function loadBankFile(fileName) {
   var report = importInbox(cfgAllowlist_()[0]);
   report.file = fileName;
   report.rows_in_file = rows.length;
+  return report;
+}
+
+/**
+ * Дописать разбор и объяснение в УЖЕ импортированные карточки.
+ *
+ * Обычный импорт для этого не годится: он отклоняет дубликаты, а все эти единицы
+ * в таблице уже есть. Сопоставление идёт по `en` — в банке это ключ уникальности,
+ * по нему же импортёр ловит дубликаты. Обновляются обе карточки единицы (recog и
+ * prod): разбор принадлежит словосочетанию, а не направлению.
+ */
+function backfillGloss() {
+  var text = {};
+  var files = ['seed-batch-001.tsv'].concat(BANK_FILES);
+  var scanned = 0;
+  files.forEach(function (f) {
+    var rows;
+    try { rows = fetchTsv_(f); } catch (e) { Logger.log(f + ': ' + e.message); return; }
+    rows.forEach(function (cells) {
+      var en = String(cells[1] || '').trim();
+      var note = String(cells[7] || '').trim();
+      var breakdown = String(cells[8] || '').trim();
+      scanned++;
+      if (en && (note || breakdown)) text[en] = { note: note, breakdown: breakdown };
+    });
+  });
+
+  var updates = [];
+  readCards_().forEach(function (c) {
+    var t = text[String(c.en).trim()];
+    if (!t) return;
+    // Пустым значением ничего не затираем: файл мог отстать от таблицы.
+    var patch = {};
+    if (t.note && String(c.note || '') !== t.note) patch.note = t.note;
+    if (t.breakdown && String(c.breakdown || '') !== t.breakdown) patch.breakdown = t.breakdown;
+    if (Object.keys(patch).length) updates.push({ _row: c._row, patch: patch });
+  });
+
+  var written = writeCardUpdates_(updates);
+  var report = 'разбор: в файлах ' + Object.keys(text).length + ' единиц из ' + scanned +
+    ', обновлено карточек ' + written;
+  Logger.log(report);
   return report;
 }
 

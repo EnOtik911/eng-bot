@@ -168,6 +168,16 @@
         <p id="answer" class="answer"></p>
         <p id="example" class="example"></p>
         <p id="example-ru" class="example example-ru"></p>
+
+        <!-- Разбор: раскрыт на первой встрече со словосочетанием, свёрнут на
+             повторении. Владелец знает отдельные слова, но не связку — и при этом
+             сотня повторений в день не должна тормозить о текст, который он уже
+             читал. Раскрытость задаёт JS, потому что CSS не умеет открывать details. -->
+        <details id="gloss" class="gloss" hidden>
+          <summary id="gloss-summary">Разбор</summary>
+          <p id="gloss-words" class="gloss-words"></p>
+          <p id="gloss-note" class="gloss-note"></p>
+        </details>
       </div>
 
       <button id="reveal" class="btn btn-primary">Показать</button>

@@ -246,6 +246,13 @@ function handleBotUpdate_(update) {
     }
     sendMessage_(userId, '<pre>' + escapeHtml_(clip_(String(report), 3500)) + '</pre>',
       launchKeyboard_());
+  } else if (text === '/gloss') {
+    try {
+      sendMessage_(userId, escapeHtml_(backfillGloss()));
+    } catch (e) {
+      sendMessage_(userId, '<b>Заливка разбора упала</b>\n<pre>' +
+        escapeHtml_(String(e.message)) + '</pre>');
+    }
   } else if (text === '/export') {
     var dump = exportReviewsCsv(userId);
     if (!dump.rows) { sendMessage_(userId, 'Выгружать пока нечего — журнал пуст.'); return; }

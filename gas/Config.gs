@@ -22,7 +22,10 @@ var CARD_COLUMNS = [
   'lapses', 'last_review', 'created_at', 'user_id', 'source_batch',
   // Добавлена после первой живой сессии. Только в конце: вставка в середину сдвинула
   // бы значения во всех существующих строках.
-  'first_review'
+  'first_review',
+  // Пословный разбор словосочетания. Тоже в самый конец — по той же причине, что и
+  // first_review: вставка в середину сдвинула бы значения во всех живых строках.
+  'breakdown'
 ];
 
 /**
@@ -52,7 +55,13 @@ var GRAMMAR_LOG_COLUMNS = ['pattern_id', 'ts', 'rating', 'errors', 'hints', 'ite
 
 var VALID_KINDS = ['scramble', 'gapfill', 'transform', 'fix'];
 
-var IMPORT_COLUMNS = ['type', 'en', 'ru', 'example_en', 'example_ru', 'layer', 'topic', 'note'];
+/**
+ * `note` отвечает на вопрос «почему говорится именно так», `breakdown` — «что здесь
+ * какое слово». Разные вопросы, поэтому разные колонки: смешав их, нельзя показать
+ * одно без другого, а на повторении нужен как раз разбор без объяснения.
+ */
+var IMPORT_COLUMNS = ['type', 'en', 'ru', 'example_en', 'example_ru', 'layer', 'topic',
+  'note', 'breakdown'];
 var LOG_COLUMNS = ['card_id', 'ts', 'rating', 'elapsed_days', 'interval_days',
   'stability', 'difficulty', 'batch_id'];
 

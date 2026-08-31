@@ -155,7 +155,11 @@ function cardPayload_(c) {
     example_en: c.example_en,
     example_ru: c.example_ru,
     layer: c.layer,
-    state: c.state
+    state: c.state,
+    // Разбор едет вместе с карточкой, а не отдельным запросом: очередь и так уже
+    // забирается целиком, а лишний round trip к Apps Script стоит 400-1500 мс.
+    note: c.note || '',
+    breakdown: c.breakdown || ''
   };
 }
 
