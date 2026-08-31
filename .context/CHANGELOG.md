@@ -16,3 +16,5 @@
 2026-08-31 | T-012-ux-wave-a | orchestrator | guide overflow 193px fixed, Audi rings + jet redrawn, blue palette | .context/HANDOFF.md:34
 2026-08-31 | T-013-737 | orchestrator | owner's 737 SVG embedded, pitch sign fixed, decor sized in vw | .context/HANDOFF.md:12
 2026-08-31 | T-014-analytics | orchestrator | stats+achievements+/export; Sheets Date bug: 0 due -> 12 due live | .context/HANDOFF.md:20
+2026-08-31 | T-015-pace | orchestrator | pulse, position+minutes, visible pause, next_due, steel palette | .context/HANDOFF.md:28
+2026-08-31 | T-016-gloss | orchestrator | breakdown+note on card; 119 units written; /gloss backfill | .context/HANDOFF.md:28

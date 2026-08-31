@@ -39,10 +39,23 @@ Wave A delivered only the measured defects (guide overflow, palette, decor). The
 also asked for a coherent UX pass over the whole app — grid, typography, buttons,
 screen-to-screen consistency. That was NOT done and is still open.
 
+- Gloss lives in TWO columns on purpose: `breakdown` = which word is which,
+  `note` = why it is said that way. On a review only the breakdown is wanted, so
+  they must stay separable. Both are LAST in their schemas
+- The gloss block is open on a card's first appearance, collapsed on review: a
+  finished explanation in front of you replaces the recall a review tests
+- backfillGloss (/gloss) is the only way to fill already-imported units — the
+  importer rejects duplicates, so a re-import fills nothing
+- Minutes shown to the user come from 8 s/card in test/load-model.mjs, the same
+  measurement the daily target came from. Do not invent a different constant
+
 ## Open, not done
 
-- The broad UX pass the owner asked for (grid, typography, buttons, screen-to-screen
-  consistency) is still untouched. Wave A fixed only measured defects.
+- Gloss content exists for 119 units (starter batch, core, social). business,
+  analysis, fintech and tech have the column and no text — roughly a month of queue
+  away at 10 new/day. Write them with the same two-column format.
+- The broad UX pass (grid, typography, buttons, screen-to-screen consistency) is
+  still untouched beyond the pace work.
 - FSRS state written BEFORE the date fix used NaN elapsed days, so existing
   stability/difficulty values are suspect. The scheduler self-corrects over
   subsequent reviews; a deliberate reset was NOT done and needs the owner's call.
