@@ -18,3 +18,5 @@
 2026-08-31 | T-014-analytics | orchestrator | stats+achievements+/export; Sheets Date bug: 0 due -> 12 due live | .context/HANDOFF.md:20
 2026-08-31 | T-015-pace | orchestrator | pulse, position+minutes, visible pause, next_due, steel palette | .context/HANDOFF.md:28
 2026-08-31 | T-016-gloss | orchestrator | breakdown+note on card; 119 units written; /gloss backfill | .context/HANDOFF.md:28
+2026-08-31 | T-017-gloss-all | orchestrator | breakdown+note for all 323 units, coverage asserted per file | test/gloss.test.mjs
+2026-08-31 | T-018-design-system | orchestrator | 29 font sizes -> 8-step scale, focus-visible, 44px targets | test/design-system.test.mjs

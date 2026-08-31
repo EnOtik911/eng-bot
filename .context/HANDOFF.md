@@ -49,19 +49,27 @@ screen-to-screen consistency. That was NOT done and is still open.
 - Minutes shown to the user come from 8 s/card in test/load-model.mjs, the same
   measurement the daily target came from. Do not invent a different constant
 
+- The visual system is now enforced by test/design-system.test.mjs: type sits on
+  the --t-* scale (hardcoded font-size is a failure), headings use --h-screen /
+  --h-section including in the guide, :focus-visible must exist, touch targets are
+  44px and the "?" gets there via a pseudo-element rather than a bigger circle
+- Every unit in the bank (323) has breakdown + note; coverage is asserted per file
+
 ## Open, not done
 
-- Gloss content exists for 119 units (starter batch, core, social). business,
-  analysis, fintech and tech have the column and no text — roughly a month of queue
-  away at 10 new/day. Write them with the same two-column format.
-- The broad UX pass (grid, typography, buttons, screen-to-screen consistency) is
-  still untouched beyond the pace work.
-- FSRS state written BEFORE the date fix used NaN elapsed days, so existing
-  stability/difficulty values are suspect. The scheduler self-corrects over
-  subsequent reviews; a deliberate reset was NOT done and needs the owner's call.
-- The leaked bot token has still never been revoked in BotFather.
+- FSRS state written BEFORE the date fix used elapsed=0 instead of the real gap, so
+  roughly 36 cards carry intervals that are too short (avg stability 1.5 days).
+  DECIDED: no reset. FSRS grows those intervals back over the next few reviews; a
+  reset would cost the same extra reviews AND throw away the record that these
+  units are already known. Revisit only if stability is still near 1 after a week.
+- The leaked bot token has never been revoked. Only the owner can do this
+  (BotFather -> /revoke), then update BOT_TOKEN in Script Properties.
+- Grammar block still needs no work, but its gloss equivalent (why a pattern is
+  formed that way) does not exist — the hint field carries only per-item hints.
 
 ## Resume instruction
 
-Ask the owner whether to reset the FSRS state corrupted by the date bug, then take
-the UX pass. Read .context/PROJECT.md lines 66-91 first.
+No task is in flight. Everything the owner raised through 2026-08-31 is delivered and
+verified live. Next candidates, none started: grammar-side explanations, a dark theme
+(the palette is committed to light on purpose — see the applyTheme comment), and
+checking whether retention becomes measurable after a week of real reviews.
