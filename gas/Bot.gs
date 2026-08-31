@@ -33,9 +33,8 @@ function launchKeyboard_() {
 /** Called by the daily trigger. */
 function dailyPing() {
   var settings = readSettings_();
-  writeSetting_('last_trigger_run', new Date().toISOString());
-
   var allow = cfgAllowlist_();
+  var delivered = true;
   var cards = readCards_();
   var today = todayStr_(settings.timezone);
   var patterns = [];
@@ -85,7 +84,7 @@ function dailyPing() {
       lines = ['<b>Сегодня свободно</b>',
         'Всё повторено, новых на сегодня нет.',
         next ? 'Следующее повторение: ' + next : 'Новых карточек в запасе не осталось — залей батч.'];
-      sendMessage_(userId, lines.join('\n'));
+      if (!ok_(sendMessage_(userId, lines.join('\n')))) delivered = false;
       return;
     }
 
@@ -97,8 +96,20 @@ function dailyPing() {
       lines.push('Грамматика — шаблонов к повторению: ' + gDue + ', новых: ' + gTarget);
     }
     if (leeches) lines.push('Пиявок ждёт переформулировки: ' + leeches);
-    sendMessage_(userId, lines.join('\n'), launchKeyboard_());
+    if (!ok_(sendMessage_(userId, lines.join('\n'), launchKeyboard_()))) delivered = false;
   });
+
+  // Отметка ставится ПОСЛЕ фактической отправки, а не в начале функции.
+  // Раньше она стояла первой строкой, и упавший между отметкой и отправкой пинг
+  // выглядел совершенно живым: приложение читает эту же метку, чтобы предупредить
+  // «триггер молчит». Метка о намерении вместо метки о результате — это тот самый
+  // зелёный тест при мёртвом процессе, только в проде.
+  if (delivered) writeSetting_('last_trigger_run', new Date().toISOString());
+}
+
+/** Ответ Telegram — единственное доказательство, что сообщение ушло. */
+function ok_(res) {
+  return !!(res && res.ok);
 }
 
 /** Ближайшая дата, когда снова появится работа. Нужна, чтобы тишина была объяснимой. */

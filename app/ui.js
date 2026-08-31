@@ -23,6 +23,27 @@
 
   function pendingCount() { return window.Store.getBuffer().length; }
 
+  /**
+   * Снимок позиции после каждой карточки. Ответы и без него не терялись — они уходят
+   * в буфер сразу после оценки — но очередь жила только в памяти, поэтому возврат
+   * после перерыва всегда начинался с главного экрана и с нулевого прогресса.
+   * У практики позиции нет: она бесконечная и продолжать в ней нечего.
+   */
+  function saveProgress() {
+    if (!session || session.practice) return;
+    var day = (state.vocab && state.vocab.today) || '';
+    window.Store.setProgress(session.snapshot(day));
+  }
+
+  /** Снимок сегодняшнего дня, если он есть. Вчерашний не годится: очередь уже другая. */
+  function savedProgress() {
+    var p = window.Store.getProgress();
+    if (!p || !p.cards || !p.cards.length) return null;
+    var today = state.vocab && state.vocab.today;
+    if (today && p.day && p.day !== today) { window.Store.clearProgress(); return null; }
+    return p;
+  }
+
   function refreshPending() {
     var n = pendingCount() + window.Store.getGrammarBuffer().length;
     el('pending').textContent = n ? T.pendingBanner(n) : '';
@@ -107,6 +128,7 @@
 
     renderCounters();
     renderProgress();
+    saveProgress();
     show('screen-card');
   }
 
@@ -121,8 +143,14 @@
     if (!revealed) return;
     var entry = session.rate(rating);
     if (entry) {
-      window.Store.pushAnswer(entry);
-      refreshPending();
+      // В практике оценка живёт ровно до следующей карточки: она переставляет
+      // «не помню» назад в очередь и на этом кончается. В буфер она НЕ попадает,
+      // иначе свободный прогон уехал бы на сервер как настоящее повторение и
+      // сдвинул расписание — то самое, ради чего этот режим отделён от сессии.
+      if (!session.practice) {
+        window.Store.pushAnswer(entry);
+        refreshPending();
+      }
       if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
     }
     if (session.remaining() === 0) { finish(); return; }
@@ -152,9 +180,16 @@
 
   function finish() {
     el('progress').style.width = '100%';
-    el('done-body').textContent = T.doneBody(session ? session.answered : 0);
+    var practice = session && session.practice;
+    el('done-body').textContent = practice
+      ? T.practiceDoneBody(session.answered)
+      : T.doneBody(session ? session.answered : 0);
+    el('done-title').textContent = practice ? T.practiceDoneTitle : T.doneTitle;
+    // Пройденная сессия больше не «незакрытая»: снимок надо убрать, иначе на главном
+    // экране навсегда повиснет «продолжить» с пустой очередью.
+    window.Store.clearProgress();
     show('screen-done');
-    flush();
+    if (!practice) flush();
   }
 
   function flush(force) {
@@ -327,6 +362,12 @@
       ? T.homeDue(gDue) + T.homeNew(gNew) : '—';
     el('tile-grammar').disabled = !g || !(g.patterns && g.patterns.length);
 
+    var saved = savedProgress();
+    var left = saved ? saved.cards.length : 0;
+    el('resume-vocab').hidden = !saved;
+    if (saved) el('resume-vocab').textContent = T.resumeVocab(left);
+    if (saved) el('tile-vocab-count').textContent = T.resumeTile(left);
+
     var note = '';
     if (!g || !(g.patterns && g.patterns.length)) note = T.grammarUnavailable;
     el('home-note').hidden = !note;
@@ -377,9 +418,28 @@
   }
 
   function startVocab() {
+    // Плитка и кнопка «продолжить» ведут в одно и то же место намеренно: тап по
+    // привычке не должен стоить позиции в незакрытой сессии.
+    var saved = savedProgress();
+    if (saved) { launch(saved); return; }
     var payload = state.vocab;
     if (!payload) { showError(null); return; }
     launch(payload);
+  }
+
+  /**
+   * Свободная практика. Отдельный запрос, а не кусок обычной сессии: карточек
+   * пройденного могут быть сотни, и таскать их в каждой сессии ради режима, который
+   * открывают изредка, значит платить за него каждый день.
+   */
+  function startPractice() {
+    show('screen-loading');
+    window.Api.getPractice().then(function (res) {
+      if (!res || !res.ok) { showError(res && res.code); return; }
+      if (!res.cards.length) { el('empty-body').textContent = T.practiceEmpty; show('screen-empty'); return; }
+      res.practice = true;
+      launch(res);
+    }).catch(function () { showError(null); });
   }
 
   function launch(payload) {
@@ -412,6 +472,9 @@
 
     bindKeyboard(el('typebox'), el('typebox-done'), el('typefield'));
     el('tile-vocab').addEventListener('click', startVocab);
+    el('resume-vocab').addEventListener('click', startVocab);
+    el('practice-empty').addEventListener('click', startPractice);
+    el('practice-done').addEventListener('click', startPractice);
     el('tile-grammar').addEventListener('click', function () {
       if (window.GrammarUI) window.GrammarUI.open(state.grammar);
     });

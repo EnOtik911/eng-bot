@@ -84,19 +84,7 @@ function buildSession(userId) {
       leech_threshold: leechThreshold,
       ui_lang: settings.ui_lang || 'ru'
     },
-    cards: queue.map(function (c) {
-      return {
-        card_id: c.card_id,
-        direction: c.direction,
-        type: c.type,
-        en: c.en,
-        ru: c.ru,
-        example_en: c.example_en,
-        example_ru: c.example_ru,
-        layer: c.layer,
-        state: c.state
-      };
-    }),
+    cards: queue.map(cardPayload_),
     counts: {
       due: due.length,
       new_available: fresh.length,
@@ -108,6 +96,74 @@ function buildSession(userId) {
       locked: locked
     },
     warnings: warnings
+  };
+}
+
+/**
+ * Форма карточки, которую видит клиент. Одна на все режимы: свободная практика
+ * рендерится тем же кодом, что и сессия, и разойтись эти две формы не должны.
+ */
+function cardPayload_(c) {
+  return {
+    card_id: c.card_id,
+    direction: c.direction,
+    type: c.type,
+    en: c.en,
+    ru: c.ru,
+    example_en: c.example_en,
+    example_ru: c.example_ru,
+    layer: c.layer,
+    state: c.state
+  };
+}
+
+/** Fisher-Yates. Порядок расписания в практике не нужен и вреден: он предсказуем. */
+function shuffle_(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+/**
+ * Свободная практика: гонять уже пройденное сколько угодно, НЕ трогая расписание.
+ *
+ * Почему у этого режима нет и не должно быть flush: FSRS считает интервал от момента
+ * фактического повторения. Лишний прогон раньше срока, записанный как настоящий,
+ * занижает интервал — алгоритм решает, что материал знают хуже, чем знают, и
+ * завтрашняя нагрузка растёт на ровном месте. Поэтому сервер здесь только ОТДАЁТ
+ * карточки и не принимает по ним ничего обратно; ответов в этом режиме не существует
+ * ни в буфере клиента, ни в журнале.
+ *
+ * Берутся только те карточки, которые пользователь уже видел. new/locked/suspended
+ * он по определению не видел, и подсунуть их здесь значило бы ввести новое слово в
+ * обход дневной нормы — ровно то, от чего норма и защищает.
+ */
+function buildPractice(userId, limit) {
+  var settings = readSettings_();
+  var tz = settings.timezone || 'Europe/Moscow';
+  var cap = parseInt(limit, 10) || parseInt(settings.practice_size_cap, 10) || 60;
+
+  var mine = readCards_().filter(function (c) { return String(c.user_id) === String(userId); });
+  var seen = mine.filter(function (c) {
+    var st = String(c.state || '');
+    return st !== 'new' && st !== 'locked' && st !== 'suspended';
+  });
+
+  shuffle_(seen);
+
+  return {
+    ok: true,
+    server_ts: new Date().toISOString(),
+    today: todayStr_(tz),
+    settings: { ui_lang: settings.ui_lang || 'ru' },
+    cards: seen.slice(0, cap).map(cardPayload_),
+    counts: {
+      available: seen.length,
+      in_session: Math.min(seen.length, cap)
+    },
+    warnings: []
   };
 }
 

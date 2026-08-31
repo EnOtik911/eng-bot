@@ -10,13 +10,34 @@
     this.settings = payload.settings;
     this.warnings = payload.warnings || [];
     this.counts = payload.counts || {};
+    // Свободная практика: ответы никуда не пишутся, расписание не двигается.
+    // Флаг живёт на сессии, а не в UI, чтобы «куда девать оценку» решалось в одном месте.
+    this.practice = !!payload.practice;
     this.queue = payload.cards.slice();
     // Исходный объём работы: по нему считается прогресс. Длина очереди для этого
     // не годится — «не помню» возвращает карточку, и полоса поехала бы назад.
-    this.plannedTotal = this.queue.length;
-    this.answered = 0;
+    this.plannedTotal = payload.planned_total || this.queue.length;
+    this.answered = payload.answered || 0;
     this.current = null;
   }
+
+  /**
+   * Состояние, которого достаточно, чтобы продолжить с той же карточки.
+   * Текущая карточка кладётся обратно в голову очереди: показанная, но не оценённая,
+   * она ещё не прожита, и терять её при выходе нельзя.
+   */
+  Session.prototype.snapshot = function (day) {
+    return {
+      day: day,
+      practice: this.practice,
+      settings: this.settings,
+      counts: this.counts,
+      warnings: this.warnings,
+      planned_total: this.plannedTotal,
+      answered: this.answered,
+      cards: (this.current ? [this.current] : []).concat(this.queue)
+    };
+  };
 
   Session.prototype.next = function () {
     this.current = this.queue.length ? this.queue.shift() : null;

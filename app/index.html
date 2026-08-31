@@ -123,13 +123,16 @@
     <div class="state-icon">✓</div>
     <h1>На сегодня всё</h1>
     <p class="muted" id="empty-body">Очередь пуста.</p>
+    <button id="practice-empty" class="btn">Погонять пройденное</button>
+    <p class="hint">Свободный прогон: расписание не двигается</p>
   </section>
 
   <section id="screen-done" hidden class="state center">
     <div class="state-icon">✓</div>
-    <h1>Сессия закрыта</h1>
+    <h1 id="done-title">Сессия закрыта</h1>
     <p id="done-body" class="muted"></p>
     <p id="flush-status" class="hint"></p>
+    <button id="practice-done" class="btn">Погонять пройденное</button>
     <button id="again-session" class="btn btn-quiet">Ещё раз</button>
   </section>
 
@@ -147,6 +150,7 @@
         <span id="tile-grammar-count" class="tile-count"></span>
       </button>
     </div>
+    <button id="resume-vocab" class="btn" hidden></button>
     <p id="home-note" class="hint" hidden></p>
   </section>
 

@@ -8,6 +8,10 @@
   var K_BUFFER = 'engbot.buffer.v1';
   var K_BATCH = 'engbot.batch.v1';
   var K_META = 'engbot.meta.v1';
+  // Позиция в незакрытой сессии. Ответы и без неё не терялись — они уходят в буфер
+  // сразу после оценки — но очередь жила только в памяти, поэтому возврат после
+  // перекура всегда начинался с главного экрана и с нулевого прогресса.
+  var K_PROGRESS = 'engbot.progress.v1';
   // Grammar keeps its own buffer and batch id: a pending vocabulary flush and a
   // pending grammar flush must never end up in the same batch, or one server-side
   // duplicate check would silently swallow the other.
@@ -73,6 +77,10 @@
       }
       return id;
     },
+
+    getProgress: function () { return read(K_PROGRESS, null); },
+    setProgress: function (p) { write(K_PROGRESS, p); },
+    clearProgress: function () { try { localStorage.removeItem(K_PROGRESS); } catch (e) {} },
 
     getMeta: function () { return read(K_META, {}); },
     setMeta: function (m) { write(K_META, m); }

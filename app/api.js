@@ -21,6 +21,13 @@
         .then(function (r) { return r.json(); });
     },
 
+    /** Практика только читает: обратного вызова у этого режима нет по замыслу. */
+    getPractice: function () {
+      var url = base() + '?action=practice&initData=' + encodeURIComponent(initData());
+      return fetch(url, { method: 'GET', redirect: 'follow' })
+        .then(function (r) { return r.json(); });
+    },
+
     getGrammar: function () {
       var url = base() + '?action=grammar&initData=' + encodeURIComponent(initData());
       return fetch(url, { method: 'GET', redirect: 'follow' })

@@ -23,14 +23,23 @@ function check(name, fn) {
 }
 function assert(c, m) { if (!c) throw new Error(m); }
 
-/** Свежий Bot.gs со стабами вместо всего, что живёт вне файла. */
+/**
+ * Свежий Bot.gs со стабами вместо всего, что живёт вне файла.
+ * Имена перечислены явно: подставить их через with/Proxy было бы короче, но тогда
+ * опечатка в имени зависимости молча превратилась бы в undefined вместо падения.
+ */
+const DEPS = ['cfgAllowlist_', 'CacheService', 'loadEverything', 'buildSession',
+  'PropertiesService', 'UrlFetchApp', 'Logger', 'cfg_', 'readSettings_', 'writeSetting_',
+  'readCards_', 'readPatterns_', 'readGrammarItems_', 'todayStr_',
+  'sendMessage_', 'launchKeyboard_'];
+
 function load(env) {
-  const prelude = 'var cfgAllowlist_, CacheService, loadEverything, buildSession, ' +
-    'PropertiesService, UrlFetchApp, Logger, cfg_;\n';
-  const epilogue = '\n' + ['cfgAllowlist_', 'CacheService', 'loadEverything', 'buildSession',
-    'PropertiesService', 'UrlFetchApp', 'Logger', 'cfg_', 'sendMessage_', 'launchKeyboard_']
+  // Объявляем только то, чего в самом файле нет: объявленное там перекрывается ниже.
+  const declaredInFile = ['sendMessage_', 'launchKeyboard_'];
+  const prelude = 'var ' + DEPS.filter(n => !declaredInFile.includes(n)).join(', ') + ';\n';
+  const epilogue = '\n' + DEPS
     .map(n => n + ' = env.' + n + ' !== undefined ? env.' + n + ' : ' + n + ';').join('\n') +
-    '\nreturn { handleBotUpdate_: handleBotUpdate_ };';
+    '\nreturn { handleBotUpdate_: handleBotUpdate_, dailyPing: dailyPing };';
   return new Function('env', prelude + src + epilogue)(env);
 }
 
@@ -94,6 +103,74 @@ check('чужой пользователь не может запустить з
   load(env).handleBotUpdate_({ update_id: 5, message: { text: '/load', from: { id: 111 } } });
   assert(called === 0, 'заливку запустил не владелец');
   assert(sent.length === 0, 'чужому вообще не отвечаем');
+});
+
+
+/**
+ * Ежедневный пинг: отметка о РЕЗУЛЬТАТЕ, а не о намерении.
+ *
+ * Раньше last_trigger_run писался первой строкой dailyPing. Приложение читает ту же
+ * метку, чтобы предупредить «триггер молчит» — значит пинг, упавший между отметкой и
+ * отправкой, выглядел абсолютно живым. Зелёная метка при отсутствующем сообщении —
+ * это тот же самый зелёный тест при мёртвом процессе, только в проде.
+ */
+function pingHarness(over) {
+  const written = {};
+  const sent = [];
+  const env = {
+    cfgAllowlist_: () => ['686280935'],
+    Logger: { log() {} },
+    readSettings_: () => ({ timezone: 'Europe/Moscow', daily_new_target: '10',
+      grammar_daily_new_target: '1', ...(over && over.settings) }),
+    writeSetting_: (k, v) => { written[k] = v; },
+    readCards_: () => (over && over.cards) || [],
+    readPatterns_: () => (over && over.patterns) || [],
+    readGrammarItems_: () => (over && over.items) || [],
+    todayStr_: () => '2026-08-31',
+    launchKeyboard_: () => undefined,
+    sendMessage_: (id, text) => {
+      sent.push({ id, text });
+      return over && over.sendFails ? { ok: false, description: 'blocked' } : { ok: true };
+    },
+    ...(over && over.env)
+  };
+  return { env, written, sent };
+}
+
+const dueCard = { user_id: '686280935', state: 'review', due: '2026-08-01' };
+
+check('пинг отправляется и отмечается как выполненный', () => {
+  const { env, written, sent } = pingHarness({ cards: [dueCard] });
+  load(env).dailyPing();
+  assert(sent.length === 1, 'сообщений отправлено ' + sent.length);
+  assert(written.last_trigger_run, 'успешный пинг не отметился — приложение решит, что триггер мёртв');
+});
+
+check('НЕ отмечается, когда Telegram отказался принять сообщение', () => {
+  const { env, written, sent } = pingHarness({ cards: [dueCard], sendFails: true });
+  load(env).dailyPing();
+  assert(sent.length === 1, 'попытка отправки должна была быть');
+  assert(!written.last_trigger_run,
+    'метка поставлена при неотправленном сообщении — ровно тот дефект, ради которого набор написан');
+});
+
+check('НЕ отмечается, когда пинг упал по дороге', () => {
+  const { env, written } = pingHarness({
+    cards: [dueCard],
+    env: { readCards_: () => { throw new Error('лист cards недоступен'); } }
+  });
+  let threw = false;
+  try { load(env).dailyPing(); } catch (e) { threw = true; }
+  assert(threw, 'падение должно быть видимым, а не проглоченным');
+  assert(!written.last_trigger_run, 'упавший пинг отметился как успешный');
+});
+
+check('день без долгов — это тоже сообщение, а не молчание', () => {
+  const { env, sent, written } = pingHarness({ cards: [] });
+  load(env).dailyPing();
+  assert(sent.length === 1, 'в пустой день бот промолчал — тишина неотличима от смерти триггера');
+  assert(/свободно/i.test(sent[0].text), 'текст не про свободный день: ' + sent[0].text);
+  assert(written.last_trigger_run, 'пустой день тоже успешный пинг');
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

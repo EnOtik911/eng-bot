@@ -27,6 +27,15 @@ window.I18N = {
     easy: 'Легко',
     typeHint: 'Набери по-английски и нажми «Показать»',
     doneTitle: 'Сессия закрыта',
+    resumeVocab: function (n) {
+      return 'Продолжить: осталось ' + n + ' ' + plural(n, 'карточка', 'карточки', 'карточек');
+    },
+    resumeTile: function (n) { return 'не закрыто: ' + n; },
+    practiceDoneTitle: 'Прогон закончен',
+    practiceDoneBody: function (n) {
+      return 'Прогнал карточек: ' + n + '. Расписание не тронуто.';
+    },
+    practiceEmpty: 'Гонять пока нечего — сначала пройди хотя бы одну сессию.',
     doneBody: function (n) { return 'Пройдено карточек: ' + n; },
     sending: 'Отправляю…',
     sent: 'Отправлено',

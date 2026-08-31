@@ -86,5 +86,49 @@ check('buffer entry carries card_id, rating and a timestamp', () => {
   assert(!Number.isNaN(Date.parse(e.ts)), 'ts must be a parseable ISO string');
 });
 
+
+/**
+ * Пауза. Ответы и раньше не терялись — они уходят в буфер сразу после оценки — но
+ * позиция жила только в памяти, и возврат после перерыва начинался с нуля.
+ * Снимок обязан переживать пересоздание объекта, иначе «продолжить» соврёт.
+ */
+check('снимок возвращает ту же карточку, на которой остановились', () => {
+  const s = new Session(payload(5));
+  s.next(); s.rate(3);
+  s.next(); s.rate(3);
+  s.next();                       // показана, но не оценена — терять её нельзя
+  const shown = s.current.card_id;
+
+  const back = new Session(s.snapshot('2026-08-31'));
+  back.next();
+  assert(back.current.card_id === shown,
+    'продолжили с ' + back.current.card_id + ', а остановились на ' + shown);
+});
+
+check('снимок сохраняет прогресс, а не пересчитывает его от остатка', () => {
+  const s = new Session(payload(5));
+  s.next(); s.rate(3);
+  s.next(); s.rate(3);
+  const back = new Session(s.snapshot('2026-08-31'));
+  assert(back.answered === 2, 'пройдено ' + back.answered + ', ожидалось 2');
+  assert(back.plannedTotal === 5,
+    'исходный объём ' + back.plannedTotal + ', ожидалось 5 — иначе полоса прогресса врёт');
+});
+
+check('незаданная карточка не удваивается в снимке', () => {
+  const s = new Session(payload(3));
+  s.next();
+  const snap = s.snapshot('2026-08-31');
+  assert(snap.cards.length === 3, 'в снимке ' + snap.cards.length + ' карточек, ожидалось 3');
+  assert(snap.cards[0].card_id === 'c0', 'текущая карточка должна быть первой');
+});
+
+check('практика помечена в сессии и переживает снимок', () => {
+  const p = payload(2); p.practice = true;
+  const s = new Session(p);
+  assert(s.practice === true, 'флаг практики не прочитан из payload');
+  assert(new Session(s.snapshot('2026-08-31')).practice === true, 'флаг потерян в снимке');
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) process.exit(1);
