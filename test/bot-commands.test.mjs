@@ -34,6 +34,7 @@ function assert(c, m) { if (!c) throw new Error(m); }
 const DEPS = ['cfgAllowlist_', 'CacheService', 'loadEverything', 'buildSession',
   'PropertiesService', 'UrlFetchApp', 'Logger', 'cfg_', 'readSettings_', 'writeSetting_',
   'readCards_', 'readPatterns_', 'readGrammarItems_', 'todayStr_', 'Utilities',
+  'unlockEligible',
   'VALID_LAYERS', 'writeCardUpdates_', 'appendReviewLog_', 'flushSeen_', 'flushRecord_',
   'sendMessage_', 'launchKeyboard_'];
 
@@ -176,6 +177,85 @@ check('день без долгов — это тоже сообщение, а �
   assert(sent.length === 1, 'в пустой день бот промолчал — тишина неотличима от смерти триггера');
   assert(/свободно/i.test(sent[0].text), 'текст не про свободный день: ' + sent[0].text);
   assert(written.last_trigger_run, 'пустой день тоже успешный пинг');
+});
+
+
+/**
+ * /set пишет прямо в настройки планировщика. Свободная запись сюда ломает не
+ * интерфейс, а расписание — молча и надолго: retention 5 или норма в тысячу
+ * карточек не дают никакой ошибки, они просто делают следующий месяц бессмысленным.
+ */
+function setHarness(settings) {
+  const written = {};
+  const sent = [];
+  const env = {
+    cfgAllowlist_: () => ['686280935'],
+    Logger: { log() {} },
+    CacheService: { getScriptCache: () => ({ get: () => null, put() {} }) },
+    readSettings_: () => ({ daily_new_target: '10', desired_retention: '0.85',
+      unlock_interval_days: '21', leech_threshold: '5', session_size_cap: '120',
+      ping_hour: '8', grammar_daily_new_target: '1', grammar_desired_retention: '0.9',
+      ...settings }),
+    writeSetting_: (k, v) => { written[k] = v; },
+    unlockEligible: () => 'открыто карточек производства 12',
+    sendMessage_: (id, text) => { sent.push(text); return { ok: true }; },
+    launchKeyboard_: () => undefined
+  };
+  return { env, written, sent };
+}
+const cmd = (text) => ({ update_id: Math.floor(Math.random() * 1e9),
+  message: { text, from: { id: 686280935 } } });
+
+check('/set меняет разрешённый ключ', () => {
+  const { env, written, sent } = setHarness();
+  load(env).handleBotUpdate_(cmd('/set daily_new_target 6'));
+  assert(written.daily_new_target === '6', 'записано ' + written.daily_new_target);
+  // Стрелка приходит как -&gt;: сообщение уходит с parse_mode HTML и целиком
+  // экранируется, Telegram отрисует её обратно как ->. Проверяем смысл, не байты.
+  assert(/daily_new_target/.test(sent[0]) && /\b10\b/.test(sent[0]) && /\b6\b/.test(sent[0]),
+    'ответ не показывает старое и новое: ' + sent[0]);
+});
+
+check('/set отвергает значение вне границ', () => {
+  const { env, written } = setHarness();
+  load(env).handleBotUpdate_(cmd('/set desired_retention 5'));
+  assert(written.desired_retention === undefined,
+    'retention 5 записан — расписание было бы сломано молча');
+});
+
+check('/set отвергает ключ вне белого списка', () => {
+  const { env, written } = setHarness();
+  load(env).handleBotUpdate_(cmd('/set last_trigger_run 2020-01-01'));
+  assert(Object.keys(written).length === 0, 'записан служебный ключ: ' + JSON.stringify(written));
+});
+
+check('/set отвергает не-число', () => {
+  const { env, written } = setHarness();
+  load(env).handleBotUpdate_(cmd('/set daily_new_target много'));
+  assert(written.daily_new_target === undefined, 'записан мусор');
+});
+
+check('/set принимает запятую как десятичный разделитель', () => {
+  const { env, written } = setHarness();
+  load(env).handleBotUpdate_(cmd('/set desired_retention 0,9'));
+  assert(written.desired_retention === '0.9',
+    'записано ' + written.desired_retention + ' — с телефона запятая приходит постоянно');
+});
+
+check('/set без аргументов показывает список и текущие значения', () => {
+  const { env, written, sent } = setHarness();
+  load(env).handleBotUpdate_(cmd('/set'));
+  assert(Object.keys(written).length === 0, 'подсказка не должна ничего писать');
+  assert(/daily_new_target/.test(sent[0]) && /сейчас/.test(sent[0]), 'нет списка: ' + sent[0]);
+});
+
+check('смена порога сразу догоняет уже созревшие единицы', () => {
+  const { env, written, sent } = setHarness();
+  load(env).handleBotUpdate_(cmd('/set unlock_interval_days 7'));
+  assert(written.unlock_interval_days === '7', 'порог не записан');
+  assert(/открыто карточек производства/.test(sent[0]),
+    'разблокировка не запущена — настройка сработала бы только на следующем ' +
+    'повторении каждой карточки, то есть через недели: ' + sent[0]);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

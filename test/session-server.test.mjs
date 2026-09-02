@@ -25,13 +25,21 @@ function dayShift(days) {
     .toISOString().slice(0, 10);
 }
 
+// Список слоёв берётся ИЗ Config.gs, а не переписывается здесь: заглушка успела
+// устареть — в ней не было social и analysis, зато остались выведенные mobility и
+// hospitality. Порядок слоёв решает, что выдаётся раньше, поэтому набор проверял
+// сортировку по списку, которого в проде уже нет. Тот же класс, что и с датами.
+const cfgScope = {};
+new Function('exports', readFileSync(join(root, 'gas', 'Config.gs'), 'utf8') +
+  '\nObject.assign(exports, {VALID_LAYERS});')(cfgScope);
+
 function load({ cards, settings = {} }) {
   const src = readFileSync(join(root, 'gas', 'Session.gs'), 'utf8');
   const fsrs = readFileSync(join(root, 'gas', 'Fsrs.gs'), 'utf8');
 
   const scope = {};
   const env = {
-    VALID_LAYERS: ['core', 'business', 'mobility', 'hospitality', 'tech'],
+    VALID_LAYERS: cfgScope.VALID_LAYERS,
     Utilities: {
       formatDate: (date) => new Date(date).toISOString().slice(0, 10)
     },
@@ -268,6 +276,45 @@ check('запертые и пиявки не становятся «следую
   ]});
   const n = buildSession('1').counts.next_due;
   assert(n === dayShift(6), 'next_due = ' + n + ' — в расчёт попало то, что не выдаётся');
+});
+
+
+/**
+ * Разблокированное производство обязано идти ВПЕРЁД невиданных слов.
+ *
+ * Иначе оно конкурирует с ними за одну дневную норму и проигрывает по слою:
+ * открывшиеся единицы стартового батча лежат в business и mobility, новые слова
+ * идут с core. На живых данных это означало бы десять дней ожидания — то есть
+ * снижение порога разблокировки не дало бы ничего, и заметить это можно было бы
+ * только через те самые десять дней.
+ */
+check('производство выдаётся раньше невиданных слов', () => {
+  const { buildSession } = load({
+    settings: { daily_new_target: '4' },
+    cards: [
+      ...Array.from({ length: 10 }, (_, i) =>
+        card({ card_id: 'core' + i, state: 'new', direction: 'recog', layer: 'core' })),
+      card({ card_id: 'prod1', state: 'new', direction: 'prod', layer: 'business' }),
+      card({ card_id: 'prod2', state: 'new', direction: 'prod', layer: 'mobility' })
+    ]
+  });
+  const ids = buildSession('1').cards.map(c => c.card_id);
+  assert(ids[0] === 'prod1' && ids[1] === 'prod2',
+    'очередь начинается с ' + ids.slice(0, 3).join(', ') +
+    ' — производство ушло в конец за словами верхнего слоя');
+});
+
+check('внутри производства порядок слоёв сохраняется', () => {
+  const { buildSession } = load({
+    settings: { daily_new_target: '3' },
+    cards: [
+      card({ card_id: 'p_tech', state: 'new', direction: 'prod', layer: 'tech' }),
+      card({ card_id: 'p_core', state: 'new', direction: 'prod', layer: 'core' }),
+      card({ card_id: 'p_social', state: 'new', direction: 'prod', layer: 'social' })
+    ]
+  });
+  const ids = buildSession('1').cards.map(c => c.card_id);
+  assert(ids.join(',') === 'p_core,p_social,p_tech', 'порядок слоёв поехал: ' + ids.join(','));
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

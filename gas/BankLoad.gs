@@ -113,6 +113,45 @@ function backfillGloss() {
   return report;
 }
 
+/**
+ * Догнать разблокировку производства после изменения порога.
+ *
+ * Разблокировка живёт в applyFlush и срабатывает в момент повторения: карточка
+ * узнавания перешагнула порог — открылась пара. Значит после СНИЖЕНИЯ порога уже
+ * созревшие единицы остались бы запертыми до своего следующего повторения, то
+ * есть настройка сработала бы с задержкой в недели и выглядела бы как «не
+ * применилась».
+ *
+ * Текущий интервал не хранится отдельно, он считается как due минус last_review.
+ */
+function unlockEligible() {
+  var settings = readSettings_();
+  var tz = settings.timezone || 'Europe/Moscow';
+  var threshold = parseInt(settings.unlock_interval_days, 10) || 21;
+
+  var cards = readCards_();
+  var recogInterval = {};
+  cards.forEach(function (c) {
+    if (String(c.direction) !== 'recog') return;
+    var due = dateKey_(c.due, tz), last = dateKey_(c.last_review, tz);
+    if (!due || !last) return;
+    recogInterval[String(c.item_id)] = daysBetween_(last, due);
+  });
+
+  var updates = [];
+  cards.forEach(function (c) {
+    if (String(c.direction) !== 'prod' || String(c.state) !== 'locked') return;
+    var iv = recogInterval[String(c.item_id)];
+    if (iv === undefined || iv < threshold) return;
+    updates.push({ _row: c._row, patch: { state: 'new' } });
+  });
+
+  var written = writeCardUpdates_(updates);
+  var report = 'порог ' + threshold + ' дн: открыто карточек производства ' + written;
+  Logger.log(report);
+  return report;
+}
+
 /** Дневная норма новых. Меняется без переустановки триггеров. */
 function tuneDailyTarget(newTarget) {
   var before = readSettings_().daily_new_target;

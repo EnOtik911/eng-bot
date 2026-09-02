@@ -19,10 +19,18 @@ function dayShift(days) {
     .toISOString().slice(0, 10);
 }
 
+// Список слоёв берётся ИЗ Config.gs, а не переписывается здесь: заглушка успела
+// устареть — в ней не было social и analysis, зато остались выведенные mobility и
+// hospitality. Порядок слоёв решает, что выдаётся раньше, поэтому набор проверял
+// сортировку по списку, которого в проде уже нет. Тот же класс, что и с датами.
+const cfgScope = {};
+new Function('exports', readFileSync(join(root, 'gas', 'Config.gs'), 'utf8') +
+  '\nObject.assign(exports, {VALID_LAYERS});')(cfgScope);
+
 function load({ patterns = [], items = [], settings = {}, flushed = false } = {}) {
   const scope = {};
   const env = {
-    VALID_LAYERS: ['core', 'business', 'mobility', 'hospitality', 'tech'],
+    VALID_LAYERS: cfgScope.VALID_LAYERS,
     Utilities: { formatDate: (d) => new Date(d).toISOString().slice(0, 10) },
     readSettings_: () => Object.assign({
       timezone: 'Europe/Moscow', session_size_cap: '120', daily_new_target: '6',

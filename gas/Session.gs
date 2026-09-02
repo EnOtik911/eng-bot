@@ -85,10 +85,24 @@ function buildSession(userId) {
     if (dueStr && dueStr <= today) due.push(c);
   });
 
-  // Layer order decides which new cards come first; within a layer, import order.
+  /**
+   * Порядок новых: сначала ПРОИЗВОДСТВО, потом невиданные слова, и уже внутри —
+   * слой и порядок импорта.
+   *
+   * Разблокированная карточка производства — это закрепление уже выученного, а
+   * невиданное слово — расширение. Без этого правила они конкурируют за одну
+   * дневную норму по слою, и производство проигрывает: открывшиеся единицы
+   * стартового батча лежат в слоях business и mobility, а новые идут с core.
+   * Замерено на живых данных: 13 открытых карточек ждали бы своей очереди за
+   * 99 словами core и social, то есть около десяти дней — снижение порога
+   * разблокировки не дало бы ровным счётом ничего.
+   */
   var layerRank = {};
   VALID_LAYERS.forEach(function (l, i) { layerRank[l] = i; });
   fresh.sort(function (a, b) {
+    var pa = String(a.direction) === 'prod' ? 0 : 1;
+    var pb = String(b.direction) === 'prod' ? 0 : 1;
+    if (pa !== pb) return pa - pb;
     var la = layerRank[a.layer] === undefined ? 99 : layerRank[a.layer];
     var lb = layerRank[b.layer] === undefined ? 99 : layerRank[b.layer];
     if (la !== lb) return la - lb;

@@ -89,7 +89,11 @@ var DEFAULT_SETTINGS = {
   desired_retention: '0.85',
   session_size_cap: '120',
   leech_threshold: '5',
-  unlock_interval_days: '21',
+  // 7, а не 21. При 21 первые три недели тренируется ТОЛЬКО узнавание, а
+  // диагноз проекта — что узкое место как раз извлечение. Замер модели нагрузки
+  // (test/load-model.mjs): ранняя разблокировка стоит почти ничего по времени,
+  // 98 повторений в день против 96. Платить приходится пиявками: 52 против 43.
+  unlock_interval_days: '7',
   ping_hour: '8',
   // Grammar has its own knobs: patterns are few and each one carries a pool of
   // sentences, so a higher retention costs almost nothing here while a rule that

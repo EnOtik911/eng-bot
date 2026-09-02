@@ -102,7 +102,11 @@ var DEFAULT_SETTINGS = {
   desired_retention: '0.85',
   session_size_cap: '120',
   leech_threshold: '5',
-  unlock_interval_days: '21',
+  // 7, а не 21. При 21 первые три недели тренируется ТОЛЬКО узнавание, а
+  // диагноз проекта — что узкое место как раз извлечение. Замер модели нагрузки
+  // (test/load-model.mjs): ранняя разблокировка стоит почти ничего по времени,
+  // 98 повторений в день против 96. Платить приходится пиявками: 52 против 43.
+  unlock_interval_days: '7',
   ping_hour: '8',
   // Grammar has its own knobs: patterns are few and each one carries a pool of
   // sentences, so a higher retention costs almost nothing here while a rule that
@@ -902,10 +906,24 @@ function buildSession(userId) {
     if (dueStr && dueStr <= today) due.push(c);
   });
 
-  // Layer order decides which new cards come first; within a layer, import order.
+  /**
+   * Порядок новых: сначала ПРОИЗВОДСТВО, потом невиданные слова, и уже внутри —
+   * слой и порядок импорта.
+   *
+   * Разблокированная карточка производства — это закрепление уже выученного, а
+   * невиданное слово — расширение. Без этого правила они конкурируют за одну
+   * дневную норму по слою, и производство проигрывает: открывшиеся единицы
+   * стартового батча лежат в слоях business и mobility, а новые идут с core.
+   * Замерено на живых данных: 13 открытых карточек ждали бы своей очереди за
+   * 99 словами core и social, то есть около десяти дней — снижение порога
+   * разблокировки не дало бы ровным счётом ничего.
+   */
   var layerRank = {};
   VALID_LAYERS.forEach(function (l, i) { layerRank[l] = i; });
   fresh.sort(function (a, b) {
+    var pa = String(a.direction) === 'prod' ? 0 : 1;
+    var pb = String(b.direction) === 'prod' ? 0 : 1;
+    if (pa !== pb) return pa - pb;
     var la = layerRank[a.layer] === undefined ? 99 : layerRank[a.layer];
     var lb = layerRank[b.layer] === undefined ? 99 : layerRank[b.layer];
     if (la !== lb) return la - lb;
@@ -2523,6 +2541,53 @@ function dailyPing() {
   if (delivered) writeSetting_('last_trigger_run', new Date().toISOString());
 }
 
+/**
+ * Настройка обучения из чата: /set ключ значение.
+ *
+ * Белый список с границами, а не свободная запись в лист: настройки кормят
+ * планировщик, и retention = 5 или норма в тысячу карточек ломают не интерфейс,
+ * а расписание — молча и надолго.
+ */
+var TUNABLE = {
+  daily_new_target:         { min: 0,    max: 100,  int: true },
+  desired_retention:        { min: 0.7,  max: 0.97, int: false },
+  unlock_interval_days:     { min: 1,    max: 90,   int: true },
+  leech_threshold:          { min: 2,    max: 20,   int: true },
+  session_size_cap:         { min: 10,   max: 500,  int: true },
+  ping_hour:                { min: 0,    max: 23,   int: true },
+  grammar_daily_new_target: { min: 0,    max: 20,   int: true },
+  grammar_desired_retention:{ min: 0.7,  max: 0.97, int: false }
+};
+
+function applySetting_(text) {
+  var parts = String(text).trim().split(/\s+/);
+  if (parts.length < 3) {
+    return 'Как пользоваться: /set ключ значение\n\nДоступно:\n' +
+      Object.keys(TUNABLE).map(function (k) {
+        var t = TUNABLE[k];
+        return '  ' + k + '  (' + t.min + '..' + t.max + ')  сейчас ' + readSettings_()[k];
+      }).join('\n');
+  }
+  var key = parts[1], raw = parts[2].replace(',', '.');
+  var spec = TUNABLE[key];
+  if (!spec) return 'Ключ «' + key + '» менять нельзя. /set — покажет список.';
+
+  var value = spec.int ? parseInt(raw, 10) : parseFloat(raw);
+  if (isNaN(value)) return 'Значение «' + parts[2] + '» не число.';
+  if (value < spec.min || value > spec.max) {
+    return key + ': допустимо от ' + spec.min + ' до ' + spec.max + ', прислано ' + value;
+  }
+
+  var before = readSettings_()[key];
+  writeSetting_(key, String(value));
+  var out = key + ': ' + before + ' -> ' + value;
+
+  // Порог разблокировки применяется к уже созревшим единицам сразу, иначе
+  // настройка сработала бы только на следующем повторении каждой карточки.
+  if (key === 'unlock_interval_days') out += '\n' + unlockEligible();
+  return out;
+}
+
 /** Ответ Telegram — единственное доказательство, что сообщение ушло. */
 function ok_(res) {
   return !!(res && res.ok);
@@ -2624,6 +2689,8 @@ function handleBotUpdate_(update) {
     }
     sendMessage_(userId, '<pre>' + escapeHtml_(clip_(String(report), 3500)) + '</pre>',
       launchKeyboard_());
+  } else if (text.indexOf('/set') === 0) {
+    sendMessage_(userId, escapeHtml_(applySetting_(text)));
   } else if (text === '/gloss') {
     try {
       sendMessage_(userId, escapeHtml_(backfillGloss()));
@@ -3071,6 +3138,45 @@ function backfillGloss() {
   var written = writeCardUpdates_(updates);
   var report = 'разбор: в файлах ' + Object.keys(text).length + ' единиц из ' + scanned +
     ', обновлено карточек ' + written;
+  Logger.log(report);
+  return report;
+}
+
+/**
+ * Догнать разблокировку производства после изменения порога.
+ *
+ * Разблокировка живёт в applyFlush и срабатывает в момент повторения: карточка
+ * узнавания перешагнула порог — открылась пара. Значит после СНИЖЕНИЯ порога уже
+ * созревшие единицы остались бы запертыми до своего следующего повторения, то
+ * есть настройка сработала бы с задержкой в недели и выглядела бы как «не
+ * применилась».
+ *
+ * Текущий интервал не хранится отдельно, он считается как due минус last_review.
+ */
+function unlockEligible() {
+  var settings = readSettings_();
+  var tz = settings.timezone || 'Europe/Moscow';
+  var threshold = parseInt(settings.unlock_interval_days, 10) || 21;
+
+  var cards = readCards_();
+  var recogInterval = {};
+  cards.forEach(function (c) {
+    if (String(c.direction) !== 'recog') return;
+    var due = dateKey_(c.due, tz), last = dateKey_(c.last_review, tz);
+    if (!due || !last) return;
+    recogInterval[String(c.item_id)] = daysBetween_(last, due);
+  });
+
+  var updates = [];
+  cards.forEach(function (c) {
+    if (String(c.direction) !== 'prod' || String(c.state) !== 'locked') return;
+    var iv = recogInterval[String(c.item_id)];
+    if (iv === undefined || iv < threshold) return;
+    updates.push({ _row: c._row, patch: { state: 'new' } });
+  });
+
+  var written = writeCardUpdates_(updates);
+  var report = 'порог ' + threshold + ' дн: открыто карточек производства ' + written;
   Logger.log(report);
   return report;
 }

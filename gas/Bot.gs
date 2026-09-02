@@ -145,6 +145,53 @@ function dailyPing() {
   if (delivered) writeSetting_('last_trigger_run', new Date().toISOString());
 }
 
+/**
+ * Настройка обучения из чата: /set ключ значение.
+ *
+ * Белый список с границами, а не свободная запись в лист: настройки кормят
+ * планировщик, и retention = 5 или норма в тысячу карточек ломают не интерфейс,
+ * а расписание — молча и надолго.
+ */
+var TUNABLE = {
+  daily_new_target:         { min: 0,    max: 100,  int: true },
+  desired_retention:        { min: 0.7,  max: 0.97, int: false },
+  unlock_interval_days:     { min: 1,    max: 90,   int: true },
+  leech_threshold:          { min: 2,    max: 20,   int: true },
+  session_size_cap:         { min: 10,   max: 500,  int: true },
+  ping_hour:                { min: 0,    max: 23,   int: true },
+  grammar_daily_new_target: { min: 0,    max: 20,   int: true },
+  grammar_desired_retention:{ min: 0.7,  max: 0.97, int: false }
+};
+
+function applySetting_(text) {
+  var parts = String(text).trim().split(/\s+/);
+  if (parts.length < 3) {
+    return 'Как пользоваться: /set ключ значение\n\nДоступно:\n' +
+      Object.keys(TUNABLE).map(function (k) {
+        var t = TUNABLE[k];
+        return '  ' + k + '  (' + t.min + '..' + t.max + ')  сейчас ' + readSettings_()[k];
+      }).join('\n');
+  }
+  var key = parts[1], raw = parts[2].replace(',', '.');
+  var spec = TUNABLE[key];
+  if (!spec) return 'Ключ «' + key + '» менять нельзя. /set — покажет список.';
+
+  var value = spec.int ? parseInt(raw, 10) : parseFloat(raw);
+  if (isNaN(value)) return 'Значение «' + parts[2] + '» не число.';
+  if (value < spec.min || value > spec.max) {
+    return key + ': допустимо от ' + spec.min + ' до ' + spec.max + ', прислано ' + value;
+  }
+
+  var before = readSettings_()[key];
+  writeSetting_(key, String(value));
+  var out = key + ': ' + before + ' -> ' + value;
+
+  // Порог разблокировки применяется к уже созревшим единицам сразу, иначе
+  // настройка сработала бы только на следующем повторении каждой карточки.
+  if (key === 'unlock_interval_days') out += '\n' + unlockEligible();
+  return out;
+}
+
 /** Ответ Telegram — единственное доказательство, что сообщение ушло. */
 function ok_(res) {
   return !!(res && res.ok);
@@ -246,6 +293,8 @@ function handleBotUpdate_(update) {
     }
     sendMessage_(userId, '<pre>' + escapeHtml_(clip_(String(report), 3500)) + '</pre>',
       launchKeyboard_());
+  } else if (text.indexOf('/set') === 0) {
+    sendMessage_(userId, escapeHtml_(applySetting_(text)));
   } else if (text === '/gloss') {
     try {
       sendMessage_(userId, escapeHtml_(backfillGloss()));

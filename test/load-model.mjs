@@ -105,3 +105,14 @@ const clean = simulate({ newWordsPerDay: 6, retention: 0.85, days: 180 });
 console.log(`  без пропусков: ${clean.avg.toFixed(0)} повторений/день, пик ${clean.peak}`);
 console.log(`  с пропусками:  ${miss.avg.toFixed(0)} повторений/день, пик ${miss.peak}`);
 console.log(`  пиявок: ${clean.leeches} против ${miss.leeches}`);
+
+console.log('\nРанняя разблокировка производства, 10 новых/день, retention 0.85');
+console.log('открывать через |  повторений/день  |  минут/день  |  пик  |  пиявок');
+console.log('----------------+-------------------+--------------+-------+--------');
+for (const u of [21, 14, 7, 3]) {
+  const r = simulate({ newWordsPerDay: 10, retention: 0.85, days: 180, unlockAt: u });
+  console.log(
+    (u + ' дн').padStart(15) + ' | ' + r.avg.toFixed(0).padStart(17) + ' | ' +
+    minutes(r.avg).padStart(12) + ' | ' + String(r.peak).padStart(5) + ' | ' +
+    String(r.leeches).padStart(6));
+}
