@@ -47,6 +47,15 @@ function retention_(entries) {
   return +(good / graded.length).toFixed(3);
 }
 
+/**
+ * Сколько зрелых повторений стоит за долей. Без этого числа само удержание
+ * бесполезно: 60% по пяти повторениям это шум, по шестидесяти — диагноз, а на
+ * экране обе цифры выглядят одинаково убедительно.
+ */
+function graded_(entries) {
+  return entries.filter(function (e) { return Number(e.elapsed_days) > 0; }).length;
+}
+
 function within_(entries, days, today, tz) {
   var edge = Date.parse(today + 'T00:00:00Z') - (days - 1) * 86400000;
   return entries.filter(function (e) {
@@ -127,7 +136,12 @@ function buildStats(userId) {
       reviews_7d: w7.length,
       reviews_30d: w30.length,
       retention_7d: retention_(w7),
+      retention_7d_n: graded_(w7),
       retention_30d: retention_(w30),
+      retention_30d_n: graded_(w30),
+      // Первые показы. Они не участвуют в удержании, но объясняют, почему выборка
+      // мала: пока вводится много новых, зрелых повторений почти нет.
+      first_exposures_7d: w7.length - graded_(w7),
       avg_stability_days: cards.avgStability
     };
   }

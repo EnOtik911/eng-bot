@@ -165,5 +165,20 @@ check('выгрузка содержит и лексику, и граммати�
   assert(/,grammar,/.test(csv), 'нет строк грамматики');
 });
 
+
+check('доля удержания сопровождается размером выборки', () => {
+  const { buildStats } = load({
+    cards: [card()],
+    log: [rev({ rating: 1, elapsed_days: 0 }), rev({ rating: 3, elapsed_days: 4 }),
+          rev({ rating: 4, elapsed_days: 6 }), rev({ rating: 1, elapsed_days: 5 })]
+  });
+  const v = buildStats('1').blocks.vocab;
+  assert(v.retention_7d_n === 3,
+    'зрелых повторений посчитано ' + v.retention_7d_n + ', ожидалось 3');
+  assert(v.first_exposures_7d === 1,
+    'первых показов ' + v.first_exposures_7d + ', ожидался 1');
+  assert(Math.abs(v.retention_7d - 2 / 3) < 0.01, 'доля ' + v.retention_7d);
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) process.exit(1);

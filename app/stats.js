@@ -40,8 +40,12 @@
       row('В работе', num(b.in_progress)) +
       row('В запасе', num(b.fresh)) +
       (b.leeches ? row('Пиявок', num(b.leeches)) : '') +
-      row('Удержание за 30 дней', pct(b.retention_30d)) +
+      row('Удержание за 30 дней', b.retention_30d === null ? '—'
+        : pct(b.retention_30d) + ' (по ' + b.retention_30d_n + ')') +
       row('Повторений за 30 дней', num(b.reviews_30d)) +
+      // Пока вводится много нового, зрелых повторений мало — и удержание считается
+      // почти ни по чему. Эта строка объясняет, почему доля может скакать.
+      (b.first_exposures_7d ? row('Из них первых показов за неделю', num(b.first_exposures_7d)) : '') +
       row('Средняя стабильность', b.avg_stability_days === null ? '—'
         : b.avg_stability_days + ' ' + pluralRu(Math.round(b.avg_stability_days), 'день', 'дня', 'дней'));
   }
